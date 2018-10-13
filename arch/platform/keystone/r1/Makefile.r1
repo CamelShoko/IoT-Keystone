@@ -1,0 +1,26 @@
+################################################################################
+# Keystone revision 1 board makefile
+
+SUBFAMILY     = cc13x2-cc26x2
+DEVICE_FAMILY = CC13X2
+DEVICE_LINE   = CC13XX
+DEVICE        = CC1352R
+
+BOARD_SOURCEFILES += CC1352R1_LAUNCHXL.c CC1352R1_LAUNCHXL_fxns.c
+
+SUPPORTS_PROP_MODE  = 1
+SUPPORTS_IEEE_MODE  = 1
+SUPPORTS_BLE_BEACON = 1
+
+SUPPORTS_HIGH_PA = 0
+
+### Signal that we can be programmed with cc2538-bsl
+BOARD_SUPPORTS_BSL = 0
+
+# Used only in some platform examples as BOARD_SENSORTAG/LAUNCHPAD
+BOARD_TYPE = BOARD_SENSORTAG
+
+# leds-arch.c etc.
+BOARD_SOURCEFILES += leds-arch.c
+
+
