@@ -1,9 +1,7 @@
-# IoT-Keystone: _The_ easiest and most secure way to move sensor data to the cloud.
+# IoT-Keystone: The _easiest_ and _most secure_ way to move sensor data to the cloud.
 
 [![Build Status](https://travis-ci.org/contiki-ng/contiki-ng.svg?branch=master)](https://travis-ci.org/thisisiot/iot-keystone/branches)
 [![license](https://img.shields.io/badge/license-3--clause%20bsd-brightgreen.svg)](https://github.com/thisisiot/iot-keystone/blob/master/LICENSE.md)
-[![Latest release](https://img.shields.io/github/release/contiki-ng/contiki-ng.svg)](https://github.com/thisisiot/iot-keystone/releases/latest)
-[![GitHub Release Date](https://img.shields.io/github/release-date/contiki-ng/contiki-ng.svg)](https://github.com/thisisiot/iot-keystone/releases/latest)
 [![Last commit](https://img.shields.io/github/last-commit/contiki-ng/contiki-ng.svg)](https://github.com/thisisiot/iot-keystone/commit/HEAD)
 
 
