@@ -40,7 +40,7 @@ IoT-Keystone is based on Contiki-NG: an open-source, cross-platform operating sy
 
 ## IoT.Keystone Community Experimenter Board v1 Features
 
-The IoT.Keystone community development board is the easiest and most secure way to get your sensor data to where you need it.  It features these unprecedented features in an extremely low power and robust design, ready to go out of the box:
+The IoT.Keystone community experimenter board is the easiest and most secure way to get your sensor data to where you need it.  It features these unprecedented features in an extremely low power and robust design, ready to go out of the box:
 
 * All-in-one board, no external components required.
 * Integrated efficient sub-GHz antenna.
@@ -49,7 +49,7 @@ The IoT.Keystone community development board is the easiest and most secure way 
 * Integrated Li-Po battery charger.
 * Integrated Li-Po battery.
 * Powerful yet low power ARM Cortex-M4F MCU with 352 KB RAM operating at 48 MHz with integrated IPv6 sub-GHz mesh radio and BLE-compatible 2.4 GHz radio.
-* Enhanced ESD protection.
+* Enhanced ESD protection for more robust user handling.
 * BME280 sensor (temperature, pressure, humidity)
 * OPT3001 sensor (light)
 * MP34DT05 sensor (sound)
@@ -58,7 +58,7 @@ The IoT.Keystone community development board is the easiest and most secure way 
 
 
 
-Unless excplicitly stated otherwise, IoT-Keystone sources are distributed under
+Unless explicitly stated otherwise, IoT-Keystone sources are distributed under
 the terms of the [3-clause BSD license](LICENSE.md). This license gives
 everyone the right to use and distribute the code, either in binary or
 source code format, as long as the copyright license is retained in
