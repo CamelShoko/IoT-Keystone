@@ -29,7 +29,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- * \addtogroup cc13xx-cc26xx-platform
+ * \addtogroup keystone-platform
  * @{
  *
  * \defgroup Keystone-peripherals
@@ -39,7 +39,7 @@
  * @{
  *
  * \file
- *        Header file with definitions related to LaunchPad boards.
+ *        Header file with definitions related to Keystone boards.
  * \author
  *        Edvard Pettersen <e.pettersen@ti.com>
  *        Evan Ross <evan@thisisiot.io>
@@ -88,6 +88,14 @@
  * @{
  */
 #define BOARD_CONF_HAS_SENSORS      1
+/** @} */
+/*---------------------------------------------------------------------------*/
+/**
+* \name Keystone board r1 SPI1 is enabled as a sensor bus.
+*
+* @{
+*/
+#define TI_SPI_CONF_SPI1_ENABLE     1
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**

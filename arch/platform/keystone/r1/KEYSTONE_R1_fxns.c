@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018, Texas Instruments Incorporated
+ * Copyright (c) 2018, This. Is. IoT. - https://thisisiot.io
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
