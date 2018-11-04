@@ -31,9 +31,9 @@
  */
 
 /*
- *  ====================== CC1352R1_LAUNCHXL.c ===================================
+ *  ====================== KEYSTONE_R1.c ===================================
  *  This file is responsible for setting up the board specific items for the
- *  CC1352R1_LAUNCHXL board.
+ *  KEYSTONE_R1 board.
  */
 
 #include "contiki.h"
@@ -48,7 +48,7 @@
 #include DeviceFamily_constructPath(inc/hw_ints.h)
 #include DeviceFamily_constructPath(inc/hw_memmap.h)
 
-#include "CC1352R1_LAUNCHXL.h"
+#include "KEYSTONE_R1.h"
 
 /*
  *  =============================== ADCBuf ===============================
@@ -56,7 +56,7 @@
 #include <ti/drivers/ADCBuf.h>
 #include <ti/drivers/adcbuf/ADCBufCC26X2.h>
 
-ADCBufCC26X2_Object adcBufCC26xxObjects[CC1352R1_LAUNCHXL_ADCBUFCOUNT];
+ADCBufCC26X2_Object adcBufCC26xxObjects[KEYSTONE_R1_ADCBUFCOUNT];
 
 /*
  *  This table converts a virtual adc channel into a dio and internal analogue
@@ -65,37 +65,37 @@ ADCBufCC26X2_Object adcBufCC26xxObjects[CC1352R1_LAUNCHXL_ADCBUFCOUNT];
  *  pairs are hardwired. Do not remap them in the table. You may reorder entire
  *  entries. The mapping of dio and internal signals is package dependent.
  */
-const ADCBufCC26X2_AdcChannelLutEntry ADCBufCC26X2_adcChannelLut[CC1352R1_LAUNCHXL_ADCBUF0CHANNELCOUNT] = {
-    {CC1352R1_LAUNCHXL_DIO23_ANALOG, ADC_COMPB_IN_AUXIO7},
-    {CC1352R1_LAUNCHXL_DIO24_ANALOG, ADC_COMPB_IN_AUXIO6},
-    {CC1352R1_LAUNCHXL_DIO25_ANALOG, ADC_COMPB_IN_AUXIO5},
-    {CC1352R1_LAUNCHXL_DIO26_ANALOG, ADC_COMPB_IN_AUXIO4},
-    {CC1352R1_LAUNCHXL_DIO27_ANALOG, ADC_COMPB_IN_AUXIO3},
-    {CC1352R1_LAUNCHXL_DIO28_ANALOG, ADC_COMPB_IN_AUXIO2},
-    {CC1352R1_LAUNCHXL_DIO29_ANALOG, ADC_COMPB_IN_AUXIO1},
+const ADCBufCC26X2_AdcChannelLutEntry ADCBufCC26X2_adcChannelLut[KEYSTONE_R1_ADCBUF0CHANNELCOUNT] = {
+    {KEYSTONE_R1_DIO23_ANALOG, ADC_COMPB_IN_AUXIO7},
+    {KEYSTONE_R1_DIO24_ANALOG, ADC_COMPB_IN_AUXIO6},
+    {KEYSTONE_R1_DIO25_ANALOG, ADC_COMPB_IN_AUXIO5},
+    {KEYSTONE_R1_DIO26_ANALOG, ADC_COMPB_IN_AUXIO4},
+    {KEYSTONE_R1_DIO27_ANALOG, ADC_COMPB_IN_AUXIO3},
+    {KEYSTONE_R1_DIO28_ANALOG, ADC_COMPB_IN_AUXIO2},
+    {KEYSTONE_R1_DIO29_ANALOG, ADC_COMPB_IN_AUXIO1},
     {PIN_UNASSIGNED, ADC_COMPB_IN_VDDS},
     {PIN_UNASSIGNED, ADC_COMPB_IN_DCOUPL},
     {PIN_UNASSIGNED, ADC_COMPB_IN_VSS},
 };
 
-const ADCBufCC26X2_HWAttrs adcBufCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCBUFCOUNT] = {
+const ADCBufCC26X2_HWAttrs adcBufCC26xxHWAttrs[KEYSTONE_R1_ADCBUFCOUNT] = {
     {
         .intPriority       = ~0,
         .swiPriority       = 0,
         .adcChannelLut     = ADCBufCC26X2_adcChannelLut,
-        .gpTimerUnit       = CC1352R1_LAUNCHXL_GPTIMER0A,
+        .gpTimerUnit       = KEYSTONE_R1_GPTIMER0A,
     }
 };
 
-const ADCBuf_Config ADCBuf_config[CC1352R1_LAUNCHXL_ADCBUFCOUNT] = {
+const ADCBuf_Config ADCBuf_config[KEYSTONE_R1_ADCBUFCOUNT] = {
     {
         &ADCBufCC26X2_fxnTable,
-        &adcBufCC26xxObjects[CC1352R1_LAUNCHXL_ADCBUF0],
-        &adcBufCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCBUF0]
+        &adcBufCC26xxObjects[KEYSTONE_R1_ADCBUF0],
+        &adcBufCC26xxHWAttrs[KEYSTONE_R1_ADCBUF0]
     },
 };
 
-const uint_least8_t ADCBuf_count = CC1352R1_LAUNCHXL_ADCBUFCOUNT;
+const uint_least8_t ADCBuf_count = KEYSTONE_R1_ADCBUFCOUNT;
 
 /*
  *  =============================== ADC ===============================
@@ -103,11 +103,11 @@ const uint_least8_t ADCBuf_count = CC1352R1_LAUNCHXL_ADCBUFCOUNT;
 #include <ti/drivers/ADC.h>
 #include <ti/drivers/adc/ADCCC26XX.h>
 
-ADCCC26XX_Object adcCC26xxObjects[CC1352R1_LAUNCHXL_ADCCOUNT];
+ADCCC26XX_Object adcCC26xxObjects[KEYSTONE_R1_ADCCOUNT];
 
-const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCCOUNT] = {
+const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[KEYSTONE_R1_ADCCOUNT] = {
     {
-        .adcDIO              = CC1352R1_LAUNCHXL_DIO23_ANALOG,
+        .adcDIO              = KEYSTONE_R1_DIO23_ANALOG,
         .adcCompBInput       = ADC_COMPB_IN_AUXIO7,
         .refSource           = ADCCC26XX_FIXED_REFERENCE,
         .samplingDuration    = ADCCC26XX_SAMPLING_DURATION_2P7_US,
@@ -116,7 +116,7 @@ const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCCOUNT] = {
         .returnAdjustedVal   = false
     },
     {
-        .adcDIO              = CC1352R1_LAUNCHXL_DIO24_ANALOG,
+        .adcDIO              = KEYSTONE_R1_DIO24_ANALOG,
         .adcCompBInput       = ADC_COMPB_IN_AUXIO6,
         .refSource           = ADCCC26XX_FIXED_REFERENCE,
         .samplingDuration    = ADCCC26XX_SAMPLING_DURATION_2P7_US,
@@ -125,7 +125,7 @@ const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCCOUNT] = {
         .returnAdjustedVal   = false
     },
     {
-        .adcDIO              = CC1352R1_LAUNCHXL_DIO25_ANALOG,
+        .adcDIO              = KEYSTONE_R1_DIO25_ANALOG,
         .adcCompBInput       = ADC_COMPB_IN_AUXIO5,
         .refSource           = ADCCC26XX_FIXED_REFERENCE,
         .samplingDuration    = ADCCC26XX_SAMPLING_DURATION_2P7_US,
@@ -134,7 +134,7 @@ const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCCOUNT] = {
         .returnAdjustedVal   = false
     },
     {
-        .adcDIO              = CC1352R1_LAUNCHXL_DIO26_ANALOG,
+        .adcDIO              = KEYSTONE_R1_DIO26_ANALOG,
         .adcCompBInput       = ADC_COMPB_IN_AUXIO4,
         .refSource           = ADCCC26XX_FIXED_REFERENCE,
         .samplingDuration    = ADCCC26XX_SAMPLING_DURATION_2P7_US,
@@ -143,7 +143,7 @@ const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCCOUNT] = {
         .returnAdjustedVal   = false
     },
     {
-        .adcDIO              = CC1352R1_LAUNCHXL_DIO27_ANALOG,
+        .adcDIO              = KEYSTONE_R1_DIO27_ANALOG,
         .adcCompBInput       = ADC_COMPB_IN_AUXIO3,
         .refSource           = ADCCC26XX_FIXED_REFERENCE,
         .samplingDuration    = ADCCC26XX_SAMPLING_DURATION_2P7_US,
@@ -152,7 +152,7 @@ const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCCOUNT] = {
         .returnAdjustedVal   = false
     },
     {
-        .adcDIO              = CC1352R1_LAUNCHXL_DIO28_ANALOG,
+        .adcDIO              = KEYSTONE_R1_DIO28_ANALOG,
         .adcCompBInput       = ADC_COMPB_IN_AUXIO2,
         .refSource           = ADCCC26XX_FIXED_REFERENCE,
         .samplingDuration    = ADCCC26XX_SAMPLING_DURATION_2P7_US,
@@ -161,7 +161,7 @@ const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCCOUNT] = {
         .returnAdjustedVal   = false
     },
     {
-        .adcDIO              = CC1352R1_LAUNCHXL_DIO29_ANALOG,
+        .adcDIO              = KEYSTONE_R1_DIO29_ANALOG,
         .adcCompBInput       = ADC_COMPB_IN_AUXIO1,
         .refSource           = ADCCC26XX_FIXED_REFERENCE,
         .samplingDuration    = ADCCC26XX_SAMPLING_DURATION_2P7_US,
@@ -198,20 +198,20 @@ const ADCCC26XX_HWAttrs adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCCOUNT] = {
     }
 };
 
-const ADC_Config ADC_config[CC1352R1_LAUNCHXL_ADCCOUNT] = {
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADC0], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADC0]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADC1], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADC1]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADC2], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADC2]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADC3], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADC3]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADC4], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADC4]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADC5], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADC5]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADC6], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADC6]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADCDCOUPL], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCDCOUPL]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADCVSS], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCVSS]},
-    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[CC1352R1_LAUNCHXL_ADCVDDS], &adcCC26xxHWAttrs[CC1352R1_LAUNCHXL_ADCVDDS]},
+const ADC_Config ADC_config[KEYSTONE_R1_ADCCOUNT] = {
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADC0], &adcCC26xxHWAttrs[KEYSTONE_R1_ADC0]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADC1], &adcCC26xxHWAttrs[KEYSTONE_R1_ADC1]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADC2], &adcCC26xxHWAttrs[KEYSTONE_R1_ADC2]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADC3], &adcCC26xxHWAttrs[KEYSTONE_R1_ADC3]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADC4], &adcCC26xxHWAttrs[KEYSTONE_R1_ADC4]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADC5], &adcCC26xxHWAttrs[KEYSTONE_R1_ADC5]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADC6], &adcCC26xxHWAttrs[KEYSTONE_R1_ADC6]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADCDCOUPL], &adcCC26xxHWAttrs[KEYSTONE_R1_ADCDCOUPL]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADCVSS], &adcCC26xxHWAttrs[KEYSTONE_R1_ADCVSS]},
+    {&ADCCC26XX_fxnTable, &adcCC26xxObjects[KEYSTONE_R1_ADCVDDS], &adcCC26xxHWAttrs[KEYSTONE_R1_ADCVDDS]},
 };
 
-const uint_least8_t ADC_count = CC1352R1_LAUNCHXL_ADCCOUNT;
+const uint_least8_t ADC_count = KEYSTONE_R1_ADCCOUNT;
 
 /*
  *  =============================== ECDH ===============================
@@ -219,23 +219,23 @@ const uint_least8_t ADC_count = CC1352R1_LAUNCHXL_ADCCOUNT;
 #include <ti/drivers/ECDH.h>
 #include <ti/drivers/ecdh/ECDHCC26X2.h>
 
-ECDHCC26X2_Object ecdhCC26X2Objects[CC1352R1_LAUNCHXL_ECDHCOUNT];
+ECDHCC26X2_Object ecdhCC26X2Objects[KEYSTONE_R1_ECDHCOUNT];
 
-const ECDHCC26X2_HWAttrs ecdhCC26X2HWAttrs[CC1352R1_LAUNCHXL_ECDHCOUNT] = {
+const ECDHCC26X2_HWAttrs ecdhCC26X2HWAttrs[KEYSTONE_R1_ECDHCOUNT] = {
     {
         .intPriority       = ~0,
         .swiPriority       = 0,
     }
 };
 
-const ECDH_Config ECDH_config[CC1352R1_LAUNCHXL_ECDHCOUNT] = {
+const ECDH_Config ECDH_config[KEYSTONE_R1_ECDHCOUNT] = {
     {
-         .object  = &ecdhCC26X2Objects[CC1352R1_LAUNCHXL_ECDH0],
-         .hwAttrs = &ecdhCC26X2HWAttrs[CC1352R1_LAUNCHXL_ECDH0]
+         .object  = &ecdhCC26X2Objects[KEYSTONE_R1_ECDH0],
+         .hwAttrs = &ecdhCC26X2HWAttrs[KEYSTONE_R1_ECDH0]
     },
 };
 
-const uint_least8_t ECDH_count = CC1352R1_LAUNCHXL_ECDHCOUNT;
+const uint_least8_t ECDH_count = KEYSTONE_R1_ECDHCOUNT;
 
 /*
  *  =============================== ECDSA ===============================
@@ -243,23 +243,23 @@ const uint_least8_t ECDH_count = CC1352R1_LAUNCHXL_ECDHCOUNT;
 #include <ti/drivers/ECDSA.h>
 #include <ti/drivers/ecdsa/ECDSACC26X2.h>
 
-ECDSACC26X2_Object ecdsaCC26X2Objects[CC1352R1_LAUNCHXL_ECDSACOUNT];
+ECDSACC26X2_Object ecdsaCC26X2Objects[KEYSTONE_R1_ECDSACOUNT];
 
-const ECDSACC26X2_HWAttrs ecdsaCC26X2HWAttrs[CC1352R1_LAUNCHXL_ECDSACOUNT] = {
+const ECDSACC26X2_HWAttrs ecdsaCC26X2HWAttrs[KEYSTONE_R1_ECDSACOUNT] = {
     {
         .intPriority       = ~0,
         .swiPriority       = 0,
     }
 };
 
-const ECDSA_Config ECDSA_config[CC1352R1_LAUNCHXL_ECDSACOUNT] = {
+const ECDSA_Config ECDSA_config[KEYSTONE_R1_ECDSACOUNT] = {
     {
-         .object  = &ecdsaCC26X2Objects[CC1352R1_LAUNCHXL_ECDSA0],
-         .hwAttrs = &ecdsaCC26X2HWAttrs[CC1352R1_LAUNCHXL_ECDSA0]
+         .object  = &ecdsaCC26X2Objects[KEYSTONE_R1_ECDSA0],
+         .hwAttrs = &ecdsaCC26X2HWAttrs[KEYSTONE_R1_ECDSA0]
     },
 };
 
-const uint_least8_t ECDSA_count = CC1352R1_LAUNCHXL_ECDSACOUNT;
+const uint_least8_t ECDSA_count = KEYSTONE_R1_ECDSACOUNT;
 
 /*
  *  =============================== ECJPAKE ===============================
@@ -267,23 +267,23 @@ const uint_least8_t ECDSA_count = CC1352R1_LAUNCHXL_ECDSACOUNT;
 #include <ti/drivers/ECJPAKE.h>
 #include <ti/drivers/ecjpake/ECJPAKECC26X2.h>
 
-ECJPAKECC26X2_Object ecjpakeCC26X2Objects[CC1352R1_LAUNCHXL_ECJPAKECOUNT];
+ECJPAKECC26X2_Object ecjpakeCC26X2Objects[KEYSTONE_R1_ECJPAKECOUNT];
 
-const ECJPAKECC26X2_HWAttrs ecjpakeCC26X2HWAttrs[CC1352R1_LAUNCHXL_ECJPAKECOUNT] = {
+const ECJPAKECC26X2_HWAttrs ecjpakeCC26X2HWAttrs[KEYSTONE_R1_ECJPAKECOUNT] = {
     {
         .intPriority       = ~0,
         .swiPriority       = 0,
     }
 };
 
-const ECJPAKE_Config ECJPAKE_config[CC1352R1_LAUNCHXL_ECJPAKECOUNT] = {
+const ECJPAKE_Config ECJPAKE_config[KEYSTONE_R1_ECJPAKECOUNT] = {
     {
-         .object  = &ecjpakeCC26X2Objects[CC1352R1_LAUNCHXL_ECJPAKE0],
-         .hwAttrs = &ecjpakeCC26X2HWAttrs[CC1352R1_LAUNCHXL_ECJPAKE0]
+         .object  = &ecjpakeCC26X2Objects[KEYSTONE_R1_ECJPAKE0],
+         .hwAttrs = &ecjpakeCC26X2HWAttrs[KEYSTONE_R1_ECJPAKE0]
     },
 };
 
-const uint_least8_t ECJPAKE_count = CC1352R1_LAUNCHXL_ECJPAKECOUNT;
+const uint_least8_t ECJPAKE_count = KEYSTONE_R1_ECJPAKECOUNT;
 
 
 /*
@@ -292,23 +292,23 @@ const uint_least8_t ECJPAKE_count = CC1352R1_LAUNCHXL_ECJPAKECOUNT;
 #include <ti/drivers/SHA2.h>
 #include <ti/drivers/sha2/SHA2CC26X2.h>
 
-SHA2CC26X2_Object sha2CC26X2Objects[CC1352R1_LAUNCHXL_SHA2COUNT];
+SHA2CC26X2_Object sha2CC26X2Objects[KEYSTONE_R1_SHA2COUNT];
 
-const SHA2CC26X2_HWAttrs sha2CC26X2HWAttrs[CC1352R1_LAUNCHXL_SHA2COUNT] = {
+const SHA2CC26X2_HWAttrs sha2CC26X2HWAttrs[KEYSTONE_R1_SHA2COUNT] = {
     {
         .intPriority       = ~0,
         .swiPriority       = 0,
     }
 };
 
-const SHA2_Config SHA2_config[CC1352R1_LAUNCHXL_SHA2COUNT] = {
+const SHA2_Config SHA2_config[KEYSTONE_R1_SHA2COUNT] = {
     {
-         .object  = &sha2CC26X2Objects[CC1352R1_LAUNCHXL_SHA20],
-         .hwAttrs = &sha2CC26X2HWAttrs[CC1352R1_LAUNCHXL_SHA20]
+         .object  = &sha2CC26X2Objects[KEYSTONE_R1_SHA20],
+         .hwAttrs = &sha2CC26X2HWAttrs[KEYSTONE_R1_SHA20]
     },
 };
 
-const uint_least8_t SHA2_count = CC1352R1_LAUNCHXL_SHA2COUNT;
+const uint_least8_t SHA2_count = KEYSTONE_R1_SHA2COUNT;
 
 /*
  *  =============================== AESCCM ===============================
@@ -316,23 +316,23 @@ const uint_least8_t SHA2_count = CC1352R1_LAUNCHXL_SHA2COUNT;
 #include <ti/drivers/AESCCM.h>
 #include <ti/drivers/aesccm/AESCCMCC26XX.h>
 
-AESCCMCC26XX_Object aesccmCC26XXObjects[CC1352R1_LAUNCHXL_AESCCMCOUNT];
+AESCCMCC26XX_Object aesccmCC26XXObjects[KEYSTONE_R1_AESCCMCOUNT];
 
-const AESCCMCC26XX_HWAttrs aesccmCC26XXHWAttrs[CC1352R1_LAUNCHXL_AESCCMCOUNT] = {
+const AESCCMCC26XX_HWAttrs aesccmCC26XXHWAttrs[KEYSTONE_R1_AESCCMCOUNT] = {
     {
         .intPriority       = ~0,
         .swiPriority       = 0,
     }
 };
 
-const AESCCM_Config AESCCM_config[CC1352R1_LAUNCHXL_AESCCMCOUNT] = {
+const AESCCM_Config AESCCM_config[KEYSTONE_R1_AESCCMCOUNT] = {
     {
-         .object  = &aesccmCC26XXObjects[CC1352R1_LAUNCHXL_AESCCM0],
-         .hwAttrs = &aesccmCC26XXHWAttrs[CC1352R1_LAUNCHXL_AESCCM0]
+         .object  = &aesccmCC26XXObjects[KEYSTONE_R1_AESCCM0],
+         .hwAttrs = &aesccmCC26XXHWAttrs[KEYSTONE_R1_AESCCM0]
     },
 };
 
-const uint_least8_t AESCCM_count = CC1352R1_LAUNCHXL_AESCCMCOUNT;
+const uint_least8_t AESCCM_count = KEYSTONE_R1_AESCCMCOUNT;
 
 /*
  *  =============================== AESECB ===============================
@@ -340,78 +340,23 @@ const uint_least8_t AESCCM_count = CC1352R1_LAUNCHXL_AESCCMCOUNT;
 #include <ti/drivers/AESECB.h>
 #include <ti/drivers/aesecb/AESECBCC26XX.h>
 
-AESECBCC26XX_Object aesecbCC26XXObjects[CC1352R1_LAUNCHXL_AESECBCOUNT];
+AESECBCC26XX_Object aesecbCC26XXObjects[KEYSTONE_R1_AESECBCOUNT];
 
-const AESECBCC26XX_HWAttrs aesecbCC26XXHWAttrs[CC1352R1_LAUNCHXL_AESECBCOUNT] = {
+const AESECBCC26XX_HWAttrs aesecbCC26XXHWAttrs[KEYSTONE_R1_AESECBCOUNT] = {
     {
         .intPriority       = ~0,
         .swiPriority       = 0,
     }
 };
 
-const AESECB_Config AESECB_config[CC1352R1_LAUNCHXL_AESECBCOUNT] = {
+const AESECB_Config AESECB_config[KEYSTONE_R1_AESECBCOUNT] = {
     {
-         .object  = &aesecbCC26XXObjects[CC1352R1_LAUNCHXL_AESECB0],
-         .hwAttrs = &aesecbCC26XXHWAttrs[CC1352R1_LAUNCHXL_AESECB0]
+         .object  = &aesecbCC26XXObjects[KEYSTONE_R1_AESECB0],
+         .hwAttrs = &aesecbCC26XXHWAttrs[KEYSTONE_R1_AESECB0]
     },
 };
 
-const uint_least8_t AESECB_count = CC1352R1_LAUNCHXL_AESECBCOUNT;
-
-/*
- *  =============================== GPIO ===============================
- */
-#include <ti/drivers/GPIO.h>
-#include <ti/drivers/gpio/GPIOCC26XX.h>
-
-/*
- * Array of Pin configurations
- * NOTE: The order of the pin configurations must coincide with what was
- *       defined in CC1352R1_LAUNCHXL.h
- * NOTE: Pins not used for interrupts should be placed at the end of the
- *       array. Callback entries can be omitted from callbacks array to
- *       reduce memory usage.
- */
-GPIO_PinConfig gpioPinConfigs[] = {
-    /* Input pins */
-    GPIOCC26XX_DIO_15 | GPIO_DO_NOT_CONFIG,  /* Button 0 */
-    GPIOCC26XX_DIO_14 | GPIO_DO_NOT_CONFIG,  /* Button 1 */
-
-    GPIOCC26XX_DIO_15 | GPIO_DO_NOT_CONFIG,  /* CC1352R1_LAUNCHXL_SPI_MASTER_READY */
-    GPIOCC26XX_DIO_21 | GPIO_DO_NOT_CONFIG,  /* CC1352R1_LAUNCHXL_SPI_SLAVE_READY */
-
-    /* Output pins */
-    GPIOCC26XX_DIO_07 | GPIO_DO_NOT_CONFIG,  /* Green LED */
-    GPIOCC26XX_DIO_06 | GPIO_DO_NOT_CONFIG,  /* Red LED */
-
-    /* SPI Flash CSN */
-    GPIOCC26XX_DIO_20 | GPIO_DO_NOT_CONFIG,
-
-    /* SD CS */
-    GPIOCC26XX_DIO_21 | GPIO_DO_NOT_CONFIG,
-};
-
-/*
- * Array of callback function pointers
- * NOTE: The order of the pin configurations must coincide with what was
- *       defined in CC1352R1_LAUNCH.h
- * NOTE: Pins not used for interrupts can be omitted from callbacks array to
- *       reduce memory usage (if placed at end of gpioPinConfigs array).
- */
-GPIO_CallbackFxn gpioCallbackFunctions[] = {
-    NULL,  /* Button 0 */
-    NULL,  /* Button 1 */
-    NULL,  /* CC1352R1_LAUNCHXL_SPI_MASTER_READY */
-    NULL,  /* CC1352R1_LAUNCHXL_SPI_SLAVE_READY */
-};
-
-const GPIOCC26XX_Config GPIOCC26XX_config = {
-    .pinConfigs         = (GPIO_PinConfig *)gpioPinConfigs,
-    .callbacks          = (GPIO_CallbackFxn *)gpioCallbackFunctions,
-    .numberOfPinConfigs = CC1352R1_LAUNCHXL_GPIOCOUNT,
-    .numberOfCallbacks  = sizeof(gpioCallbackFunctions)/sizeof(GPIO_CallbackFxn),
-    .intPriority        = (~0)
-};
+const uint_least8_t AESECB_count = KEYSTONE_R1_AESECBCOUNT;
 
 /*
  *  =============================== GPTimer ===============================
@@ -419,9 +364,9 @@ const GPIOCC26XX_Config GPIOCC26XX_config = {
  */
 #include <ti/drivers/timer/GPTimerCC26XX.h>
 
-GPTimerCC26XX_Object gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMERCOUNT];
+GPTimerCC26XX_Object gptimerCC26XXObjects[KEYSTONE_R1_GPTIMERCOUNT];
 
-const GPTimerCC26XX_HWAttrs gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMERPARTSCOUNT] = {
+const GPTimerCC26XX_HWAttrs gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMERPARTSCOUNT] = {
     { .baseAddr = GPT0_BASE, .intNum = INT_GPT0A, .intPriority = (~0), .powerMngrId = PowerCC26XX_PERIPH_GPT0, .pinMux = GPT_PIN_0A, },
     { .baseAddr = GPT0_BASE, .intNum = INT_GPT0B, .intPriority = (~0), .powerMngrId = PowerCC26XX_PERIPH_GPT0, .pinMux = GPT_PIN_0B, },
     { .baseAddr = GPT1_BASE, .intNum = INT_GPT1A, .intPriority = (~0), .powerMngrId = PowerCC26XX_PERIPH_GPT1, .pinMux = GPT_PIN_1A, },
@@ -432,15 +377,15 @@ const GPTimerCC26XX_HWAttrs gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMERPARTSC
     { .baseAddr = GPT3_BASE, .intNum = INT_GPT3B, .intPriority = (~0), .powerMngrId = PowerCC26XX_PERIPH_GPT3, .pinMux = GPT_PIN_3B, },
 };
 
-const GPTimerCC26XX_Config GPTimerCC26XX_config[CC1352R1_LAUNCHXL_GPTIMERPARTSCOUNT] = {
-    { &gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMER0], &gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMER0A], GPT_A },
-    { &gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMER0], &gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMER0B], GPT_B },
-    { &gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMER1], &gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMER1A], GPT_A },
-    { &gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMER1], &gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMER1B], GPT_B },
-    { &gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMER2], &gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMER2A], GPT_A },
-    { &gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMER2], &gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMER2B], GPT_B },
-    { &gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMER3], &gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMER3A], GPT_A },
-    { &gptimerCC26XXObjects[CC1352R1_LAUNCHXL_GPTIMER3], &gptimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_GPTIMER3B], GPT_B },
+const GPTimerCC26XX_Config GPTimerCC26XX_config[KEYSTONE_R1_GPTIMERPARTSCOUNT] = {
+    { &gptimerCC26XXObjects[KEYSTONE_R1_GPTIMER0], &gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMER0A], GPT_A },
+    { &gptimerCC26XXObjects[KEYSTONE_R1_GPTIMER0], &gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMER0B], GPT_B },
+    { &gptimerCC26XXObjects[KEYSTONE_R1_GPTIMER1], &gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMER1A], GPT_A },
+    { &gptimerCC26XXObjects[KEYSTONE_R1_GPTIMER1], &gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMER1B], GPT_B },
+    { &gptimerCC26XXObjects[KEYSTONE_R1_GPTIMER2], &gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMER2A], GPT_A },
+    { &gptimerCC26XXObjects[KEYSTONE_R1_GPTIMER2], &gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMER2B], GPT_B },
+    { &gptimerCC26XXObjects[KEYSTONE_R1_GPTIMER3], &gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMER3A], GPT_A },
+    { &gptimerCC26XXObjects[KEYSTONE_R1_GPTIMER3], &gptimerCC26xxHWAttrs[KEYSTONE_R1_GPTIMER3B], GPT_B },
 };
 
 /*
@@ -451,9 +396,9 @@ const GPTimerCC26XX_Config GPTimerCC26XX_config[CC1352R1_LAUNCHXL_GPTIMERPARTSCO
 
 #if TI_I2C_CONF_ENABLE
 
-I2CCC26XX_Object i2cCC26xxObjects[CC1352R1_LAUNCHXL_I2CCOUNT];
+I2CCC26XX_Object i2cCC26xxObjects[KEYSTONE_R1_I2CCOUNT];
 
-const I2CCC26XX_HWAttrsV1 i2cCC26xxHWAttrs[CC1352R1_LAUNCHXL_I2CCOUNT] = {
+const I2CCC26XX_HWAttrsV1 i2cCC26xxHWAttrs[KEYSTONE_R1_I2CCOUNT] = {
 #if TI_I2C_CONF_I2C0_ENABLE
     {
         .baseAddr    = I2C0_BASE,
@@ -461,23 +406,23 @@ const I2CCC26XX_HWAttrsV1 i2cCC26xxHWAttrs[CC1352R1_LAUNCHXL_I2CCOUNT] = {
         .intNum      = INT_I2C_IRQ,
         .intPriority = ~0,
         .swiPriority = 0,
-        .sdaPin      = CC1352R1_LAUNCHXL_I2C0_SDA0,
-        .sclPin      = CC1352R1_LAUNCHXL_I2C0_SCL0,
+        .sdaPin      = KEYSTONE_R1_I2C0_SDA0,
+        .sclPin      = KEYSTONE_R1_I2C0_SCL0,
     },
 #endif
 };
 
-const I2C_Config I2C_config[CC1352R1_LAUNCHXL_I2CCOUNT] = {
+const I2C_Config I2C_config[KEYSTONE_R1_I2CCOUNT] = {
 #if TI_I2C_CONF_I2C0_ENABLE
     {
         .fxnTablePtr = &I2CCC26XX_fxnTable,
-        .object      = &i2cCC26xxObjects[CC1352R1_LAUNCHXL_I2C0],
-        .hwAttrs     = &i2cCC26xxHWAttrs[CC1352R1_LAUNCHXL_I2C0]
+        .object      = &i2cCC26xxObjects[KEYSTONE_R1_I2C0],
+        .hwAttrs     = &i2cCC26xxHWAttrs[KEYSTONE_R1_I2C0]
     },
 #endif
 };
 
-const uint_least8_t I2C_count = CC1352R1_LAUNCHXL_I2CCOUNT;
+const uint_least8_t I2C_count = KEYSTONE_R1_I2CCOUNT;
 
 #endif /* TI_I2C_CONF_ENABLE */
 
@@ -568,14 +513,14 @@ const NVSSPI25X_HWAttrs nvsSPI25XHWAttrs[1] = {
         .spiHandle = NULL,
         .spiIndex = 0,
         .spiBitRate = 4000000,
-        .spiCsnGpioIndex = CC1352R1_LAUNCHXL_GPIO_SPI_FLASH_CS,
+        .spiCsnGpioIndex = KEYSTONE_R1_GPIO_SPI_FLASH_CS,
     },
 };
 
 #endif /* TI_NVS_CONF_NVS_EXTERNAL_ENABLE */
 
 /* NVS Region index 0 and 1 refer to NVS and NVS SPI respectively */
-const NVS_Config NVS_config[CC1352R1_LAUNCHXL_NVSCOUNT] = {
+const NVS_Config NVS_config[KEYSTONE_R1_NVSCOUNT] = {
 #if TI_NVS_CONF_NVS_INTERNAL_ENABLE
     {
         .fxnTablePtr = &NVSCC26XX_fxnTable,
@@ -592,7 +537,7 @@ const NVS_Config NVS_config[CC1352R1_LAUNCHXL_NVSCOUNT] = {
 #endif
 };
 
-const uint_least8_t NVS_count = CC1352R1_LAUNCHXL_NVSCOUNT;
+const uint_least8_t NVS_count = KEYSTONE_R1_NVSCOUNT;
 
 #endif /* TI_NVS_CONF_ENABLE */
 
@@ -602,19 +547,56 @@ const uint_least8_t NVS_count = CC1352R1_LAUNCHXL_NVSCOUNT;
 #include <ti/drivers/PIN.h>
 #include <ti/drivers/pin/PINCC26XX.h>
 
+/*
+ * When configuring IO, note the following:
+ *   - IO connected as GPIO output should have PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW/HIGH  
+ *   - IO connected to internal peripherals like SPI should only have the input buffer
+ *     enabled with PIN_INPUT_EN
+ */
+
 const PIN_Config BoardGpioInitTable[] = {
 
-    CC1352R1_LAUNCHXL_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
-    CC1352R1_LAUNCHXL_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
-    CC1352R1_LAUNCHXL_PIN_BTN1 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_BOTHEDGES | PIN_HYSTERESIS,             /* Button is active low */
-    CC1352R1_LAUNCHXL_PIN_BTN2 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_BOTHEDGES | PIN_HYSTERESIS,             /* Button is active low */
-    CC1352R1_LAUNCHXL_SPI_FLASH_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,     /* External flash chip select */
-    CC1352R1_LAUNCHXL_UART0_RX | PIN_INPUT_EN | PIN_PULLDOWN,                                                /* UART RX via debugger back channel */
-    CC1352R1_LAUNCHXL_UART0_TX | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL,                          /* UART TX via debugger back channel */
-    CC1352R1_LAUNCHXL_SPI0_MOSI | PIN_INPUT_EN | PIN_PULLDOWN,                                               /* SPI master out - slave in */
-    CC1352R1_LAUNCHXL_SPI0_MISO | PIN_INPUT_EN | PIN_PULLDOWN,                                               /* SPI master in - slave out */
-    CC1352R1_LAUNCHXL_SPI0_CLK | PIN_INPUT_EN | PIN_PULLDOWN,                                                /* SPI clock */
-    CC1352R1_LAUNCHXL_DIO30_RF_SUB1GHZ | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,  /* RF SW Switch defaults to 2.4GHz path */
+    /* LED */
+    KEYSTONE_R1_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
+    KEYSTONE_R1_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
+
+#if 0
+    /* Buttons */
+    KEYSTONE_R1_PIN_BTN1 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_BOTHEDGES | PIN_HYSTERESIS,             /* Button is active low */
+    KEYSTONE_R1_PIN_BTN2 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_BOTHEDGES | PIN_HYSTERESIS,             /* Button is active low */
+#endif
+
+    /* Chip selects */
+    KEYSTONE_R1_SPI_FLASH_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,     /* External flash chip select */
+    KEYSTONE_R1_SPI_LORA_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,      /* LoRa radio chip select */
+    KEYSTONE_R1_SPI_BME280_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,    /* BME280 sensor chip select */
+    KEYSTONE_R1_SPI_IMU_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,       /* IMU chip select */
+
+    /* GPIO */
+    KEYSTONE_R1_PIN_LORA_INT | PIN_INPUT_EN | PIN_PULLDOWN | PIN_IRQ_POSEDGE,                          /* SX1262 INT active high */
+    KEYSTONE_R1_PIN_IMU_INT | PIN_INPUT_EN | PIN_PULLDOWN | PIN_IRQ_POSEDGE,                           /* SX1262 INT active high */
+    KEYSTONE_R1_PIN_ALS_INT | PIN_INPUT_EN | PIN_IRQ_NEGEDGE,                                          /* OPT3001 light sensor INT open drain active low external 10K pullup*/
+    KEYSTONE_R1_PIN_HALL | PIN_INPUT_EN,                                                               /* HALL sensor digital input */
+    KEYSTONE_R1_PIN_FLASH_EN | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,     /* Flash ENABLE output active low */
+
+
+    /* UART IO */
+    KEYSTONE_R1_UART0_RX | PIN_INPUT_EN | PIN_PULLDOWN,                                                /* UART RX via debugger back channel */
+    KEYSTONE_R1_UART0_TX | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL,                          /* UART TX via debugger back channel */
+
+    /* SPI IO */
+    KEYSTONE_R1_SPI0_MOSI | PIN_INPUT_EN | PIN_PULLDOWN,                                               /* SPI0 master out - slave in */
+    KEYSTONE_R1_SPI0_MISO | PIN_INPUT_EN | PIN_PULLDOWN,                                               /* SPI0 master in - slave out */
+    KEYSTONE_R1_SPI0_CLK | PIN_INPUT_EN | PIN_PULLDOWN,                                                /* SPI0 clock */
+    KEYSTONE_R1_SPI1_MOSI | PIN_INPUT_EN | PIN_PULLDOWN,                                               /* SPI1 master out - slave in */
+    KEYSTONE_R1_SPI1_MISO | PIN_INPUT_EN | PIN_PULLDOWN,                                               /* SPI1 master in - slave out */
+    KEYSTONE_R1_SPI1_CLK | PIN_INPUT_EN | PIN_PULLDOWN,                                                /* SPI1 clock */
+    KEYSTONE_R1_I2C0_SCL0 | PIN_INPUT_EN | PIN_OPENDRAIN,                                              /* I2C bus has external pull-ups */
+    KEYSTONE_R1_I2C0_SDA0 | PIN_INPUT_EN | PIN_OPENDRAIN,                                              /* I2C bus has external pull-ups */
+
+    /* RF */
+    KEYSTONE_R1_RF_SUB1GHZ | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,        /* RF Switch defaults to CC1352 path */
+    KEYSTONE_R1_RF_SUB1GHZ_NCTRL | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,  /* RF Switch fix to Vdd */
     PIN_TERMINATE
 };
 
@@ -645,31 +627,31 @@ const PowerCC26X2_Config PowerCC26X2_config = {
 #include <ti/drivers/PWM.h>
 #include <ti/drivers/pwm/PWMTimerCC26XX.h>
 
-PWMTimerCC26XX_Object pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWMCOUNT];
+PWMTimerCC26XX_Object pwmtimerCC26xxObjects[KEYSTONE_R1_PWMCOUNT];
 
-const PWMTimerCC26XX_HwAttrs pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWMCOUNT] = {
-    { .pwmPin = CC1352R1_LAUNCHXL_PWMPIN0, .gpTimerUnit = CC1352R1_LAUNCHXL_GPTIMER0A },
-    { .pwmPin = CC1352R1_LAUNCHXL_PWMPIN1, .gpTimerUnit = CC1352R1_LAUNCHXL_GPTIMER0B },
-    { .pwmPin = CC1352R1_LAUNCHXL_PWMPIN2, .gpTimerUnit = CC1352R1_LAUNCHXL_GPTIMER1A },
-    { .pwmPin = CC1352R1_LAUNCHXL_PWMPIN3, .gpTimerUnit = CC1352R1_LAUNCHXL_GPTIMER1B },
-    { .pwmPin = CC1352R1_LAUNCHXL_PWMPIN4, .gpTimerUnit = CC1352R1_LAUNCHXL_GPTIMER2A },
-    { .pwmPin = CC1352R1_LAUNCHXL_PWMPIN5, .gpTimerUnit = CC1352R1_LAUNCHXL_GPTIMER2B },
-    { .pwmPin = CC1352R1_LAUNCHXL_PWMPIN6, .gpTimerUnit = CC1352R1_LAUNCHXL_GPTIMER3A },
-    { .pwmPin = CC1352R1_LAUNCHXL_PWMPIN7, .gpTimerUnit = CC1352R1_LAUNCHXL_GPTIMER3B },
+const PWMTimerCC26XX_HwAttrs pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWMCOUNT] = {
+    { .pwmPin = KEYSTONE_R1_PWMPIN0, .gpTimerUnit = KEYSTONE_R1_GPTIMER0A },
+    { .pwmPin = KEYSTONE_R1_PWMPIN1, .gpTimerUnit = KEYSTONE_R1_GPTIMER0B },
+    { .pwmPin = KEYSTONE_R1_PWMPIN2, .gpTimerUnit = KEYSTONE_R1_GPTIMER1A },
+    { .pwmPin = KEYSTONE_R1_PWMPIN3, .gpTimerUnit = KEYSTONE_R1_GPTIMER1B },
+    { .pwmPin = KEYSTONE_R1_PWMPIN4, .gpTimerUnit = KEYSTONE_R1_GPTIMER2A },
+    { .pwmPin = KEYSTONE_R1_PWMPIN5, .gpTimerUnit = KEYSTONE_R1_GPTIMER2B },
+    { .pwmPin = KEYSTONE_R1_PWMPIN6, .gpTimerUnit = KEYSTONE_R1_GPTIMER3A },
+    { .pwmPin = KEYSTONE_R1_PWMPIN7, .gpTimerUnit = KEYSTONE_R1_GPTIMER3B },
 };
 
-const PWM_Config PWM_config[CC1352R1_LAUNCHXL_PWMCOUNT] = {
-    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWM0], &pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWM0] },
-    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWM1], &pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWM1] },
-    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWM2], &pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWM2] },
-    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWM3], &pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWM3] },
-    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWM4], &pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWM4] },
-    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWM5], &pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWM5] },
-    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWM6], &pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWM6] },
-    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[CC1352R1_LAUNCHXL_PWM7], &pwmtimerCC26xxHWAttrs[CC1352R1_LAUNCHXL_PWM7] },
+const PWM_Config PWM_config[KEYSTONE_R1_PWMCOUNT] = {
+    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[KEYSTONE_R1_PWM0], &pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWM0] },
+    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[KEYSTONE_R1_PWM1], &pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWM1] },
+    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[KEYSTONE_R1_PWM2], &pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWM2] },
+    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[KEYSTONE_R1_PWM3], &pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWM3] },
+    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[KEYSTONE_R1_PWM4], &pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWM4] },
+    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[KEYSTONE_R1_PWM5], &pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWM5] },
+    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[KEYSTONE_R1_PWM6], &pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWM6] },
+    { &PWMTimerCC26XX_fxnTable, &pwmtimerCC26xxObjects[KEYSTONE_R1_PWM7], &pwmtimerCC26xxHWAttrs[KEYSTONE_R1_PWM7] },
 };
 
-const uint_least8_t PWM_count = CC1352R1_LAUNCHXL_PWMCOUNT;
+const uint_least8_t PWM_count = KEYSTONE_R1_PWMCOUNT;
 
 /*
  *  =============================== RF Driver ===============================
@@ -681,7 +663,7 @@ const uint_least8_t PWM_count = CC1352R1_LAUNCHXL_PWMCOUNT;
  *
  *  This function is called by the RF driver on global driver events.
  *  It contains a default implementation to set the correct antenna path.
- *  This function is defined in the file CC1352R1_LAUNCHXL_fxns.c
+ *  This function is defined in the file KEYSTONE_R1_fxns.c
  */
 extern void rfDriverCallback(RF_Handle client, RF_GlobalEvent events, void *arg);
 
@@ -697,38 +679,6 @@ const RFCC26XX_HWAttrsV2 RFCC26XX_hwAttrs = {
     .globalEventMask    = RF_GlobalEventRadioSetup | RF_GlobalEventRadioPowerDown
 };
 
-/*
- *  =============================== SD ===============================
- */
-#include <ti/drivers/SD.h>
-#include <ti/drivers/sd/SDSPI.h>
-
-#if TI_SD_CONF_ENABLE
-
-#if !(TI_SPI_CONF_SPI0_ENABLE)
-#error "SD driver requires SPI0 enabled"
-#endif
-
-SDSPI_Object sdspiObjects[CC1352R1_LAUNCHXL_SDCOUNT];
-
-const SDSPI_HWAttrs sdspiHWAttrs[CC1352R1_LAUNCHXL_SDCOUNT] = {
-    {
-        .spiIndex = CC1352R1_LAUNCHXL_SPI0,
-        .spiCsGpioIndex = CC1352R1_LAUNCHXL_SDSPI_CS
-    }
-};
-
-const SD_Config SD_config[CC1352R1_LAUNCHXL_SDCOUNT] = {
-    {
-        .fxnTablePtr = &SDSPI_fxnTable,
-        .object = &sdspiObjects[CC1352R1_LAUNCHXL_SDSPI0],
-        .hwAttrs = &sdspiHWAttrs[CC1352R1_LAUNCHXL_SDSPI0]
-    },
-};
-
-const uint_least8_t SD_count = CC1352R1_LAUNCHXL_SDCOUNT;
-
-#endif /* TI_SD_CONF_ENABLE */
 
 /*
  *  =============================== SPI DMA ===============================
@@ -738,14 +688,14 @@ const uint_least8_t SD_count = CC1352R1_LAUNCHXL_SDCOUNT;
 
 #if TI_SPI_CONF_ENABLE
 
-SPICC26XXDMA_Object spiCC26XXDMAObjects[CC1352R1_LAUNCHXL_SPICOUNT];
+SPICC26XXDMA_Object spiCC26XXDMAObjects[KEYSTONE_R1_SPICOUNT];
 
 /*
  * NOTE: The SPI instances below can be used by the SD driver to communicate
  * with a SD card via SPI.  The 'defaultTxBufValue' fields below are set to 0xFF
  * to satisfy the SDSPI driver requirement.
  */
-const SPICC26XXDMA_HWAttrsV1 spiCC26XXDMAHWAttrs[CC1352R1_LAUNCHXL_SPICOUNT] = {
+const SPICC26XXDMA_HWAttrsV1 spiCC26XXDMAHWAttrs[KEYSTONE_R1_SPICOUNT] = {
 #if TI_SPI_CONF_SPI0_ENABLE
     {
         .baseAddr           = SSI0_BASE,
@@ -756,10 +706,10 @@ const SPICC26XXDMA_HWAttrsV1 spiCC26XXDMAHWAttrs[CC1352R1_LAUNCHXL_SPICOUNT] = {
         .defaultTxBufValue  = 0xFF,
         .rxChannelBitMask   = 1<<UDMA_CHAN_SSI0_RX,
         .txChannelBitMask   = 1<<UDMA_CHAN_SSI0_TX,
-        .mosiPin            = CC1352R1_LAUNCHXL_SPI0_MOSI,
-        .misoPin            = CC1352R1_LAUNCHXL_SPI0_MISO,
-        .clkPin             = CC1352R1_LAUNCHXL_SPI0_CLK,
-        .csnPin             = CC1352R1_LAUNCHXL_SPI0_CSN,
+        .mosiPin            = KEYSTONE_R1_SPI0_MOSI,
+        .misoPin            = KEYSTONE_R1_SPI0_MISO,
+        .clkPin             = KEYSTONE_R1_SPI0_CLK,
+        .csnPin             = KEYSTONE_R1_SPI0_CSN,
         .minDmaTransferSize = 10
     },
 #endif
@@ -773,33 +723,33 @@ const SPICC26XXDMA_HWAttrsV1 spiCC26XXDMAHWAttrs[CC1352R1_LAUNCHXL_SPICOUNT] = {
         .defaultTxBufValue  = 0xFF,
         .rxChannelBitMask   = 1<<UDMA_CHAN_SSI1_RX,
         .txChannelBitMask   = 1<<UDMA_CHAN_SSI1_TX,
-        .mosiPin            = CC1352R1_LAUNCHXL_SPI1_MOSI,
-        .misoPin            = CC1352R1_LAUNCHXL_SPI1_MISO,
-        .clkPin             = CC1352R1_LAUNCHXL_SPI1_CLK,
-        .csnPin             = CC1352R1_LAUNCHXL_SPI1_CSN,
+        .mosiPin            = KEYSTONE_R1_SPI1_MOSI,
+        .misoPin            = KEYSTONE_R1_SPI1_MISO,
+        .clkPin             = KEYSTONE_R1_SPI1_CLK,
+        .csnPin             = KEYSTONE_R1_SPI1_CSN,
         .minDmaTransferSize = 10
     },
 #endif
 };
 
-const SPI_Config SPI_config[CC1352R1_LAUNCHXL_SPICOUNT] = {
+const SPI_Config SPI_config[KEYSTONE_R1_SPICOUNT] = {
 #if TI_SPI_CONF_SPI0_ENABLE
     {
          .fxnTablePtr = &SPICC26XXDMA_fxnTable,
-         .object      = &spiCC26XXDMAObjects[CC1352R1_LAUNCHXL_SPI0],
-         .hwAttrs     = &spiCC26XXDMAHWAttrs[CC1352R1_LAUNCHXL_SPI0]
+         .object      = &spiCC26XXDMAObjects[KEYSTONE_R1_SPI0],
+         .hwAttrs     = &spiCC26XXDMAHWAttrs[KEYSTONE_R1_SPI0]
     },
 #endif
 #if TI_SPI_CONF_SPI1_ENABLE
     {
          .fxnTablePtr = &SPICC26XXDMA_fxnTable,
-         .object      = &spiCC26XXDMAObjects[CC1352R1_LAUNCHXL_SPI1],
-         .hwAttrs     = &spiCC26XXDMAHWAttrs[CC1352R1_LAUNCHXL_SPI1]
+         .object      = &spiCC26XXDMAObjects[KEYSTONE_R1_SPI1],
+         .hwAttrs     = &spiCC26XXDMAHWAttrs[KEYSTONE_R1_SPI1]
     },
 #endif
 };
 
-const uint_least8_t SPI_count = CC1352R1_LAUNCHXL_SPICOUNT;
+const uint_least8_t SPI_count = KEYSTONE_R1_SPICOUNT;
 
 #endif /* TI_SPI_CONF_ENABLE */
 
@@ -810,9 +760,9 @@ const uint_least8_t SPI_count = CC1352R1_LAUNCHXL_SPICOUNT;
 #include <ti/drivers/TRNG.h>
 #include <ti/drivers/trng/TRNGCC26X2.h>
 
-TRNGCC26X2_Object trngCC26X2Object[CC1352R1_LAUNCHXL_TRNGCOUNT];
+TRNGCC26X2_Object trngCC26X2Object[KEYSTONE_R1_TRNGCOUNT];
 
-const TRNGCC26X2_HWAttrs trngCC26X2HWAttrs[CC1352R1_LAUNCHXL_TRNGCOUNT] = {
+const TRNGCC26X2_HWAttrs trngCC26X2HWAttrs[KEYSTONE_R1_TRNGCOUNT] = {
     {
          .swiPriority = 0,
          .intPriority = ~0,
@@ -823,7 +773,7 @@ const TRNG_Config TRNG_config[] = {
     { &trngCC26X2Object[0], &trngCC26X2HWAttrs[0] },
 };
 
-const uint8_t TRNG_count = CC1352R1_LAUNCHXL_TRNGCOUNT;
+const uint8_t TRNG_count = KEYSTONE_R1_TRNGCOUNT;
 
 
 /*
@@ -834,11 +784,11 @@ const uint8_t TRNG_count = CC1352R1_LAUNCHXL_TRNGCOUNT;
 
 #if TI_UART_CONF_ENABLE
 
-UARTCC26XX_Object uartCC26XXObjects[CC1352R1_LAUNCHXL_UARTCOUNT];
+UARTCC26XX_Object uartCC26XXObjects[KEYSTONE_R1_UARTCOUNT];
 
-uint8_t uartCC26XXRingBuffer[CC1352R1_LAUNCHXL_UARTCOUNT][32];
+uint8_t uartCC26XXRingBuffer[KEYSTONE_R1_UARTCOUNT][32];
 
-const UARTCC26XX_HWAttrsV2 uartCC26XXHWAttrs[CC1352R1_LAUNCHXL_UARTCOUNT] = {
+const UARTCC26XX_HWAttrsV2 uartCC26XXHWAttrs[KEYSTONE_R1_UARTCOUNT] = {
 #if TI_UART_CONF_UART0_ENABLE
     {
         .baseAddr       = UART0_BASE,
@@ -846,12 +796,12 @@ const UARTCC26XX_HWAttrsV2 uartCC26XXHWAttrs[CC1352R1_LAUNCHXL_UARTCOUNT] = {
         .intNum         = INT_UART0_COMB,
         .intPriority    = ~0,
         .swiPriority    = 0,
-        .txPin          = CC1352R1_LAUNCHXL_UART0_TX,
-        .rxPin          = CC1352R1_LAUNCHXL_UART0_RX,
+        .txPin          = KEYSTONE_R1_UART0_TX,
+        .rxPin          = KEYSTONE_R1_UART0_RX,
         .ctsPin         = PIN_UNASSIGNED,
         .rtsPin         = PIN_UNASSIGNED,
-        .ringBufPtr     = uartCC26XXRingBuffer[CC1352R1_LAUNCHXL_UART0],
-        .ringBufSize    = sizeof(uartCC26XXRingBuffer[CC1352R1_LAUNCHXL_UART0]),
+        .ringBufPtr     = uartCC26XXRingBuffer[KEYSTONE_R1_UART0],
+        .ringBufSize    = sizeof(uartCC26XXRingBuffer[KEYSTONE_R1_UART0]),
         .txIntFifoThr   = UARTCC26XX_FIFO_THRESHOLD_1_8,
         .rxIntFifoThr   = UARTCC26XX_FIFO_THRESHOLD_4_8,
         .errorFxn       = NULL
@@ -864,12 +814,12 @@ const UARTCC26XX_HWAttrsV2 uartCC26XXHWAttrs[CC1352R1_LAUNCHXL_UARTCOUNT] = {
         .intNum         = INT_UART1_COMB,
         .intPriority    = ~0,
         .swiPriority    = 0,
-        .txPin          = CC1352R1_LAUNCHXL_UART1_TX,
-        .rxPin          = CC1352R1_LAUNCHXL_UART1_RX,
+        .txPin          = KEYSTONE_R1_UART1_TX,
+        .rxPin          = KEYSTONE_R1_UART1_RX,
         .ctsPin         = PIN_UNASSIGNED,
         .rtsPin         = PIN_UNASSIGNED,
-        .ringBufPtr     = uartCC26XXRingBuffer[CC1352R1_LAUNCHXL_UART1],
-        .ringBufSize    = sizeof(uartCC26XXRingBuffer[CC1352R1_LAUNCHXL_UART1]),
+        .ringBufPtr     = uartCC26XXRingBuffer[KEYSTONE_R1_UART1],
+        .ringBufSize    = sizeof(uartCC26XXRingBuffer[KEYSTONE_R1_UART1]),
         .txIntFifoThr   = UARTCC26XX_FIFO_THRESHOLD_1_8,
         .rxIntFifoThr   = UARTCC26XX_FIFO_THRESHOLD_4_8,
         .errorFxn       = NULL
@@ -877,24 +827,24 @@ const UARTCC26XX_HWAttrsV2 uartCC26XXHWAttrs[CC1352R1_LAUNCHXL_UARTCOUNT] = {
 #endif
 };
 
-const UART_Config UART_config[CC1352R1_LAUNCHXL_UARTCOUNT] = {
+const UART_Config UART_config[KEYSTONE_R1_UARTCOUNT] = {
 #if TI_UART_CONF_UART0_ENABLE
     {
         .fxnTablePtr = &UARTCC26XX_fxnTable,
-        .object      = &uartCC26XXObjects[CC1352R1_LAUNCHXL_UART0],
-        .hwAttrs     = &uartCC26XXHWAttrs[CC1352R1_LAUNCHXL_UART0]
+        .object      = &uartCC26XXObjects[KEYSTONE_R1_UART0],
+        .hwAttrs     = &uartCC26XXHWAttrs[KEYSTONE_R1_UART0]
     },
 #endif
 #if TI_UART_CONF_UART1_ENABLE
     {
         .fxnTablePtr = &UARTCC26XX_fxnTable,
-        .object      = &uartCC26XXObjects[CC1352R1_LAUNCHXL_UART1],
-        .hwAttrs     = &uartCC26XXHWAttrs[CC1352R1_LAUNCHXL_UART1]
+        .object      = &uartCC26XXObjects[KEYSTONE_R1_UART1],
+        .hwAttrs     = &uartCC26XXHWAttrs[KEYSTONE_R1_UART1]
     },
 #endif
 };
 
-const uint_least8_t UART_count = CC1352R1_LAUNCHXL_UARTCOUNT;
+const uint_least8_t UART_count = KEYSTONE_R1_UARTCOUNT;
 
 #endif /* TI_UART_CONF_ENABLE */
 
@@ -903,9 +853,9 @@ const uint_least8_t UART_count = CC1352R1_LAUNCHXL_UARTCOUNT;
  */
 #include <ti/drivers/dma/UDMACC26XX.h>
 
-UDMACC26XX_Object udmaObjects[CC1352R1_LAUNCHXL_UDMACOUNT];
+UDMACC26XX_Object udmaObjects[KEYSTONE_R1_UDMACOUNT];
 
-const UDMACC26XX_HWAttrs udmaHWAttrs[CC1352R1_LAUNCHXL_UDMACOUNT] = {
+const UDMACC26XX_HWAttrs udmaHWAttrs[KEYSTONE_R1_UDMACOUNT] = {
     {
         .baseAddr    = UDMA0_BASE,
         .powerMngrId = PowerCC26XX_PERIPH_UDMA,
@@ -914,10 +864,10 @@ const UDMACC26XX_HWAttrs udmaHWAttrs[CC1352R1_LAUNCHXL_UDMACOUNT] = {
     }
 };
 
-const UDMACC26XX_Config UDMACC26XX_config[CC1352R1_LAUNCHXL_UDMACOUNT] = {
+const UDMACC26XX_Config UDMACC26XX_config[KEYSTONE_R1_UDMACOUNT] = {
     {
-         .object  = &udmaObjects[CC1352R1_LAUNCHXL_UDMA0],
-         .hwAttrs = &udmaHWAttrs[CC1352R1_LAUNCHXL_UDMA0]
+         .object  = &udmaObjects[KEYSTONE_R1_UDMA0],
+         .hwAttrs = &udmaHWAttrs[KEYSTONE_R1_UDMA0]
     },
 };
 
@@ -929,43 +879,28 @@ const UDMACC26XX_Config UDMACC26XX_config[CC1352R1_LAUNCHXL_UDMACOUNT] = {
 #include <ti/drivers/Watchdog.h>
 #include <ti/drivers/watchdog/WatchdogCC26XX.h>
 
-WatchdogCC26XX_Object watchdogCC26XXObjects[CC1352R1_LAUNCHXL_WATCHDOGCOUNT];
+WatchdogCC26XX_Object watchdogCC26XXObjects[KEYSTONE_R1_WATCHDOGCOUNT];
 
-const WatchdogCC26XX_HWAttrs watchdogCC26XXHWAttrs[CC1352R1_LAUNCHXL_WATCHDOGCOUNT] = {
+const WatchdogCC26XX_HWAttrs watchdogCC26XXHWAttrs[KEYSTONE_R1_WATCHDOGCOUNT] = {
     {
         .baseAddr    = WDT_BASE,
         .reloadValue = 1000 /* Reload value in milliseconds */
     },
 };
 
-const Watchdog_Config Watchdog_config[CC1352R1_LAUNCHXL_WATCHDOGCOUNT] = {
+const Watchdog_Config Watchdog_config[KEYSTONE_R1_WATCHDOGCOUNT] = {
     {
         .fxnTablePtr = &WatchdogCC26XX_fxnTable,
-        .object      = &watchdogCC26XXObjects[CC1352R1_LAUNCHXL_WATCHDOG0],
-        .hwAttrs     = &watchdogCC26XXHWAttrs[CC1352R1_LAUNCHXL_WATCHDOG0]
+        .object      = &watchdogCC26XXObjects[KEYSTONE_R1_WATCHDOG0],
+        .hwAttrs     = &watchdogCC26XXHWAttrs[KEYSTONE_R1_WATCHDOG0]
     },
 };
 
-const uint_least8_t Watchdog_count = CC1352R1_LAUNCHXL_WATCHDOGCOUNT;
+const uint_least8_t Watchdog_count = KEYSTONE_R1_WATCHDOGCOUNT;
 
 /*
  *  Board-specific initialization function to disable external flash.
- *  This function is defined in the file CC1352R1_LAUNCHXL_fxns.c
+ *  This function is defined in the file KEYSTONE_R1_fxns.c
  */
 extern void Board_initHook(void);
 
-/*
- *  ======== CC1352R1_LAUNCHXL_initGeneral ========
- */
-void CC1352R1_LAUNCHXL_initGeneral(void)
-{
-    Power_init();
-
-    if (PIN_init(BoardGpioInitTable) != PIN_SUCCESS) {
-        /* Error with PIN_init */
-        while (1);
-    }
-
-    /* Perform board-specific initialization */
-    Board_initHook();
-}
