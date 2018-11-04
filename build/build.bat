@@ -5,8 +5,8 @@ REM Copyright (c) 2018 This. Is. IoT.
 REM Not licensed for distribution.
 
 REM Usage:
-REM   %1 - Contiki TARGET e.g. simplelink
-REM   %2 - Contiki BOARD e.g. launchpad/cc1352r1
+REM   %1 - Contiki TARGET - directory under arch/platform  e.g. simplelink
+REM   %2 - Contiki BOARD - directory under the TARGET e.g. launchpad/cc1352r1
 REM   %3 - path to application folder containing makefile to build.
 REM        e.g. build examples/hello-world
 REM   %4 - optional argument to append e.g. clean
@@ -48,6 +48,7 @@ set BUILD_CMD="%BASH_PATH%" -c "gmake TARGET=%TARGET% BOARD=%BOARD% %4 %5"
 set APP_PATH=%CONTIKI_ROOT%\%3
 
 REM try to switch to the application directory
+echo Building in %3...
 cd %APP_PATH%
 if %errorlevel% equ 1 (
     echo Error: Directory not found: %APP_PATH%
@@ -67,7 +68,8 @@ goto :eof
 
 
 :sub_help
-echo Missing arguments: please specify Contiki build [TARGET] [BOARD] [app].
+echo Missing arguments: please specify Contiki build [platform] [board] [app].
+echo Example: "build keystone r1 examples\hello-world" builds the r1 board of the keystone platform for the hello-world app
 goto END
 
 
