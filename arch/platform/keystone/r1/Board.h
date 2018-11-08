@@ -83,6 +83,12 @@ extern "C" {
  */
 #define Board_RF_SUB1GHZ        KEYSTONE_R1_RF_SUB1GHZ
 
+#define Board_PIN_LORA_INT      KEYSTONE_R1_PIN_LORA_INT
+#define Board_PIN_LORA_RST      KEYSTONE_R1_PIN_LORA_RST
+#define Board_PIN_LORA_BUSY     KEYSTONE_R1_PIN_LORA_BUSY
+#define Board_PIN_FLASH_EN      KEYSTONE_R1_PIN_FLASH_EN
+#define Board_PIN_HAL           KEYSTONE_R1_PIN_HALL
+
 #define Board_GPTIMER0A         KEYSTONE_R1_GPTIMER0A
 #define Board_GPTIMER0B         KEYSTONE_R1_GPTIMER0B
 #define Board_GPTIMER1A         KEYSTONE_R1_GPTIMER1A
@@ -148,6 +154,8 @@ extern "C" {
 #define Board_UART1             KEYSTONE_R1_UART1
 
 #define Board_WATCHDOG0         KEYSTONE_R1_WATCHDOG0
+
+#define BOARD_LORA_TXCO_WAKEUP_TIME KEYSTONE_R1_LORA_TXCO_WAKEUP_TIME 
 
 /* Board specific I2C addresses */
 #define Board_TMP_ADDR          (0x40)

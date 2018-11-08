@@ -29,6 +29,7 @@ DEVICE_FAMILY_LC := $(shell echo "$(DEVICE_FAMILY)" | tr A-Z a-z)
 
 # Add to the source dirs
 TARGET_FAMILY_DIRS += sensors
+TARGET_FAMILY_DIRS += lora
 TARGET_FAMILY_DIRS += $(BOARD)
 
 CONTIKI_TARGET_DIRS += $(TARGET_FAMILY_DIRS)
@@ -52,6 +53,13 @@ CFLAGS += $(addprefix -D, $(BOARD_DEFINES))
 CONTIKI_TARGET_SOURCEFILES += platform.c
 CONTIKI_TARGET_SOURCEFILES += batmon-sensor.c
 CONTIKI_TARGET_SOURCEFILES += $(BOARD_SOURCEFILES)
+
+# Build the sensor drivers
+
+
+# Build the lora driver
+CONTIKI_TARGET_SOURCEFILES += lora-radio.c sx126x.c lora-delay.c lora-timer.c 
+CONTIKI_TARGET_SOURCEFILES += sx1262-board.c lora-systime.c
 
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 

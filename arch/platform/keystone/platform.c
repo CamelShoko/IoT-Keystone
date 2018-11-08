@@ -94,6 +94,12 @@
  */
 extern void Board_initHook(void);
 /*---------------------------------------------------------------------------*/
+/* Singleton instance handles for device drivers SPI, I2C, I2S */
+SPI_Handle hSpiInternal;
+SPI_Handle hSpiSensor;
+
+/*---------------------------------------------------------------------------*/
+
 /*
  * \brief  Fade a specified LED.
  */
@@ -142,6 +148,39 @@ set_rf_params(void)
   NETSTACK_RADIO.set_object(RADIO_PARAM_64BIT_ADDR, ext_addr, sizeof(ext_addr));
 }
 /*---------------------------------------------------------------------------*/
+
+/*
+ * Open the SPI instance as a master to manage all traffic on the specified bus.
+ */
+static void
+spi_open(uint8_t index, SPI_Handle* hInst, uint32_t bitRate)
+{
+    SPI_Params spi_params;
+
+    /* Ensure the provided SPI index is valid. */
+    if (index >= SPI_CONF_CONTROLLER_COUNT) {
+        return;
+    }
+    if (hInst == NULL) {
+        return;
+    }
+
+    SPI_Params_init(&spi_params);
+
+    spi_params.transferMode = SPI_MODE_BLOCKING;
+    spi_params.mode = SPI_MASTER;
+    spi_params.bitRate = bitRate;
+    spi_params.dataSize = 8;
+    spi_params.frameFormat = SPI_POL0_PHA0;
+
+    /*
+    * Try to open the SPI driver. Accessing the SPI driver also ensures
+    * atomic access to the SPI interface.
+    */
+    *hInst = SPI_open(index, &spi_params);
+}
+/*---------------------------------------------------------------------------*/
+
 void
 platform_init_stage_one(void)
 {
@@ -181,6 +220,14 @@ platform_init_stage_one(void)
 #endif
 #if TI_SPI_CONF_ENABLE
   SPI_init();
+  spi_open(0, &hSpiInternal, 16000000); /* max speed SX1262*/
+  spi_open(1, &hSpiSensor, 7000000); /* max speed ICM20948 */
+  if (hSpiInternal == NULL || hSpiSensor == NULL) {
+      /*
+      * Something is seriously wrong if SPI initialization fails.
+      */
+      for (;;) { /* hang */ }
+  }
 #endif
 #if TI_NVS_CONF_ENABLE
   NVS_init();

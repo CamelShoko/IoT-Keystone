@@ -554,6 +554,15 @@ const uint_least8_t NVS_count = KEYSTONE_R1_NVSCOUNT;
  *     enabled with PIN_INPUT_EN
  */
 
+/*
+ * This is the INITIAL state of IO pins on boot up as applied by PIN_init().  The pin states
+ * and configuration CAN CHANGE at a later time by the device drivers that use them when
+ * they call PIN_open() on the specific pins they control.
+ * 
+ * It is also possible that drivers will access the pins directly without access control
+ * using the PINCC26XX_setOutputValue() API.
+*/
+
 const PIN_Config BoardGpioInitTable[] = {
 
     /* LED */
@@ -567,17 +576,17 @@ const PIN_Config BoardGpioInitTable[] = {
 #endif
 
     /* Chip selects */
-    KEYSTONE_R1_SPI_FLASH_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,     /* External flash chip select */
-    KEYSTONE_R1_SPI_LORA_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,      /* LoRa radio chip select */
-    KEYSTONE_R1_SPI_BME280_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,    /* BME280 sensor chip select */
-    KEYSTONE_R1_SPI_IMU_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,       /* IMU chip select */
+    KEYSTONE_R1_SPI_FLASH_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,     /* External flash chip select: deselected */
+    KEYSTONE_R1_SPI_LORA_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,      /* LoRa radio chip select: deselected */
+    KEYSTONE_R1_SPI_BME280_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,    /* BME280 sensor chip select: deselected */
+    KEYSTONE_R1_SPI_IMU_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,       /* IMU chip select: deselected */
 
     /* GPIO */
-    KEYSTONE_R1_PIN_LORA_INT | PIN_INPUT_EN | PIN_PULLDOWN | PIN_IRQ_POSEDGE,                          /* SX1262 INT active high */
+    //KEYSTONE_R1_PIN_LORA_INT | PIN_INPUT_EN | PIN_PULLDOWN | PIN_IRQ_POSEDGE,                          /* SX1262 INT active high */
     KEYSTONE_R1_PIN_IMU_INT | PIN_INPUT_EN | PIN_PULLDOWN | PIN_IRQ_POSEDGE,                           /* SX1262 INT active high */
     KEYSTONE_R1_PIN_ALS_INT | PIN_INPUT_EN | PIN_IRQ_NEGEDGE,                                          /* OPT3001 light sensor INT open drain active low external 10K pullup*/
     KEYSTONE_R1_PIN_HALL | PIN_INPUT_EN,                                                               /* HALL sensor digital input */
-    KEYSTONE_R1_PIN_FLASH_EN | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,     /* Flash ENABLE output active low */
+    KEYSTONE_R1_PIN_FLASH_EN | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,     /* Flash ENABLE output active low: disabled */
 
 
     /* UART IO */
@@ -591,12 +600,14 @@ const PIN_Config BoardGpioInitTable[] = {
     KEYSTONE_R1_SPI1_MOSI | PIN_INPUT_EN | PIN_PULLDOWN,                                               /* SPI1 master out - slave in */
     KEYSTONE_R1_SPI1_MISO | PIN_INPUT_EN | PIN_PULLDOWN,                                               /* SPI1 master in - slave out */
     KEYSTONE_R1_SPI1_CLK | PIN_INPUT_EN | PIN_PULLDOWN,                                                /* SPI1 clock */
+
+    /* I2C IO */
     KEYSTONE_R1_I2C0_SCL0 | PIN_INPUT_EN | PIN_OPENDRAIN,                                              /* I2C bus has external pull-ups */
     KEYSTONE_R1_I2C0_SDA0 | PIN_INPUT_EN | PIN_OPENDRAIN,                                              /* I2C bus has external pull-ups */
 
     /* RF */
     KEYSTONE_R1_RF_SUB1GHZ | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,        /* RF Switch defaults to CC1352 path */
-    KEYSTONE_R1_RF_SUB1GHZ_NCTRL | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,  /* RF Switch fix to Vdd */
+    KEYSTONE_R1_RF_SUB1GHZ_NCTRL | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,  /* RF Switch on/off */
     PIN_TERMINATE
 };
 

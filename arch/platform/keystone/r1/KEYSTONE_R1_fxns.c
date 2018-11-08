@@ -49,6 +49,8 @@
 
 #include "Board.h"
 
+extern void SX126xIoInit(void);
+
 /*
  *  ======== CC1352R1_LAUNCHXL_sendExtFlashByte ========
  */
@@ -156,6 +158,8 @@ void CC1352R1_LAUNCHXL_shutDownExtFlash(void)
 void Board_initHook()
 {
     CC1352R1_LAUNCHXL_shutDownExtFlash();
+
+    SX126xIoInit();
 }
 
 /*

@@ -53,12 +53,17 @@ extern "C" {
 #include "contiki-conf.h"
 
 /* Includes */
+#include <ti/drivers/SPI.h>
 #include <ti/drivers/PIN.h>
 #include <ti/devices/DeviceFamily.h>
 #include DeviceFamily_constructPath(driverlib/ioc.h)
 
 /* Externs */
 extern const PIN_Config BoardGpioInitTable[];
+
+/* Singleton instance handles for device drivers SPI, I2C, I2S */
+extern SPI_Handle hSpiInternal;
+extern SPI_Handle hSpiSensor;
 
 /* Defines */
 #define KEYSTONE_R1
@@ -180,6 +185,8 @@ extern const PIN_Config BoardGpioInitTable[];
 #define KEYSTONE_R1_UART_TX               KEYSTONE_R1_UART0_TX
 #define KEYSTONE_R1_UART_CTS              KEYSTONE_R1_UART0_CTS
 #define KEYSTONE_R1_UART_RTS              KEYSTONE_R1_UART0_RTS
+
+#define KEYSTONE_R1_LORA_TXCO_WAKEUP_TIME 0
 
 /*!
  *  @brief  Initialize the general board specific settings
