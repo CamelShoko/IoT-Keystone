@@ -1,2 +1,3 @@
 # Add the regions directory to the build
 MODULES += os/net/mac/lora/region
+MODULES += os/net/mac/lora/soft-se

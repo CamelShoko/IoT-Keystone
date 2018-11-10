@@ -48,6 +48,8 @@
 #include <ti/drivers/pin/PINCC26XX.h>
 
 #include "Board.h"
+#include "lib/sensors.h"
+#include "batmon-sensor.h"
 
 extern void SX126xIoInit(void);
 
@@ -160,6 +162,8 @@ void Board_initHook()
     CC1352R1_LAUNCHXL_shutDownExtFlash();
 
     SX126xIoInit();
+
+    SENSORS_ACTIVATE(batmon_sensor);
 }
 
 /*
@@ -190,3 +194,15 @@ void rfDriverCallback(RF_Handle client, RF_GlobalEvent events, void *arg)
     }
 }
 #endif
+
+
+/* Get the platform battery level for the LoRaMac stack */
+uint8_t BoardGetBatteryLevel(void)
+{
+    int value;
+
+    value = batmon_sensor.value(BATMON_SENSOR_TYPE_VOLT);
+
+    return (uint8_t)value;
+
+}

@@ -13,4 +13,7 @@ CONTIKI=../../../..
 MODULES += os/net/mac/lora
 
 
+CFLAGS += "-DREGION_US915"
+CFLAGS += "-DACTIVE_REGION=LORAMAC_REGION_US915"
+
 include $(CONTIKI)/Makefile.include

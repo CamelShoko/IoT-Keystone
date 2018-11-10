@@ -58,6 +58,13 @@ PROCESS_THREAD(loramac_node_process, ev, data)
 
     static struct etimer et;
 
+    PRINTF("Starting DEMO\n");
+    LoRaMacContiki_start(&loramac_node_process, NULL, NULL);
+
+    PRINTF("Waiting for join to complete...\n");
+    PROCESS_WAIT_EVENT_UNTIL(ev == lora_op_complete_event);
+    PRINTF("Join complete!\n");
+
     etimer_set(&et, CLOCK_SECOND * 1);
     while (1) {
         PROCESS_YIELD_UNTIL(etimer_expired(&et));
