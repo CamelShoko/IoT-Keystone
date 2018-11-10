@@ -59,7 +59,7 @@ CONTIKI_TARGET_SOURCEFILES += $(BOARD_SOURCEFILES)
 
 # Build the lora driver
 CONTIKI_TARGET_SOURCEFILES += lora-radio.c sx126x.c lora-delay.c lora-timer.c 
-CONTIKI_TARGET_SOURCEFILES += sx1262-board.c lora-systime.c
+CONTIKI_TARGET_SOURCEFILES += sx1262-board.c lora-systime.c lora-utilities.c
 
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 

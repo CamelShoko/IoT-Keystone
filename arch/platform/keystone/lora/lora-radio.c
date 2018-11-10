@@ -29,7 +29,7 @@
 #include "lora-radio.h"
 #include "sx126x.h"
 #include "sx126x-board.h"
-//#include "board.h"
+#include "LoRaMacContiki.h"
 
 /*!
  * \brief Initializes the radio
@@ -1068,6 +1068,12 @@ void RadioOnRxTimeoutIrq( void )
 void RadioOnDioIrq( void )
 {
     IrqFired = true;
+    /* This is the only code run in the context of an IRQ handler.
+     * No need to worry about interrupt priorities to satisfy SPI access
+     * from IRQ context. 
+     * Notify the MAC driver process and it'll take care of it.
+     */
+    process_poll(&loramac_process);
 }
 
 void RadioIrqProcess( void )
