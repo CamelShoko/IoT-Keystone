@@ -3,7 +3,7 @@
 
 CC13x2_CC26x2_PRE_RTM ?= 1
 
-# Core SDK is placed as a submodule under arch/cpu/cc13xx-cc26xx/lib.
+# Core SDK is placed as a submodule under arch/cpu/simplelink-cc13xx-cc26xx/lib.
 # Do a sanity check that Core SDK submodule has been initialized.
 ifndef CORE_SDK
  CORE_SDK := $(CONTIKI_CPU)/lib/coresdk_cc13xx_cc26xx
@@ -90,9 +90,6 @@ SDK_DRIVERS := $(CORE_SDK)/source/ti/drivers
 SDK_DEVICES := $(CORE_SDK)/source/ti/devices/$(SDK_DEVICES_NAME)
 
 EXTERNALDIRS += $(SDK_SOURCE) $(SDK_NORTOS)
-
-# CPU-dependent debug source files
-MODULES += os/lib/dbg-io
 
 # CPU-dependent directories
 CONTIKI_CPU_DIRS += . dev $(SUBFAMILY)

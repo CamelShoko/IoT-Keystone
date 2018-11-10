@@ -40,6 +40,7 @@
  */
 
 #include "net/mac/csma/csma.h"
+#include "net/mac/csma/csma-security.h"
 #include "net/packetbuf.h"
 #include "net/queuebuf.h"
 #include "dev/watchdog.h"
@@ -49,11 +50,6 @@
 #include "net/netstack.h"
 #include "lib/list.h"
 #include "lib/memb.h"
-
-#if CONTIKI_TARGET_COOJA
-#include "lib/simEnvChange.h"
-#include "sys/cooja_mt.h"
-#endif /* CONTIKI_TARGET_COOJA */
 
 /* Log configuration */
 #include "sys/log.h"
@@ -174,9 +170,16 @@ send_one_packet(void *ptr)
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
   packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
 
-  if(NETSTACK_FRAMER.create() < 0) {
+#if LLSEC802154_ENABLED
+#if LLSEC802154_USES_EXPLICIT_KEYS
+  /* This should possibly be taken from upper layers in the future */
+  packetbuf_set_attr(PACKETBUF_ATTR_KEY_ID_MODE, CSMA_LLSEC_KEY_ID_MODE);
+#endif /* LLSEC802154_USES_EXPLICIT_KEYS */
+#endif /* LLSEC802154_ENABLED */
+
+  if(csma_security_create_frame() < 0) {
     /* Failed to allocate space for headers */
-    LOG_ERR("failed to create packet\n");
+    LOG_ERR("failed to create packet, seqno: %d\n", packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO));
     ret = MAC_TX_ERR_FATAL;
   } else {
     int is_broadcast;
@@ -201,17 +204,10 @@ send_one_packet(void *ptr)
         if(is_broadcast) {
           ret = MAC_TX_OK;
         } else {
-          rtimer_clock_t wt;
-
           /* Check for ack */
-          wt = RTIMER_NOW();
-          watchdog_periodic();
-          while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + CSMA_ACK_WAIT_TIME)) {
-#if CONTIKI_TARGET_COOJA
-            simProcessRunValue = 1;
-            cooja_mt_yield();
-#endif /* CONTIKI_TARGET_COOJA */
-          }
+
+          /* Wait for max CSMA_ACK_WAIT_TIME */
+          RTIMER_BUSYWAIT_UNTIL(NETSTACK_RADIO.pending_packet(), CSMA_ACK_WAIT_TIME);
 
           ret = MAC_TX_NOACK;
           if(NETSTACK_RADIO.receiving_packet() ||
@@ -220,17 +216,8 @@ send_one_packet(void *ptr)
             int len;
             uint8_t ackbuf[CSMA_ACK_LEN];
 
-            if(CSMA_AFTER_ACK_DETECTED_WAIT_TIME > 0) {
-              wt = RTIMER_NOW();
-              watchdog_periodic();
-              while(RTIMER_CLOCK_LT(RTIMER_NOW(),
-                                    wt + CSMA_AFTER_ACK_DETECTED_WAIT_TIME)) {
-#if CONTIKI_TARGET_COOJA
-                simProcessRunValue = 1;
-                cooja_mt_yield();
-#endif /* CONTIKI_TARGET_COOJA */
-              }
-            }
+            /* Wait an additional CSMA_AFTER_ACK_DETECTED_WAIT_TIME to complete reception */
+            RTIMER_BUSYWAIT_UNTIL(NETSTACK_RADIO.pending_packet(), CSMA_AFTER_ACK_DETECTED_WAIT_TIME);
 
             if(NETSTACK_RADIO.pending_packet()) {
               len = NETSTACK_RADIO.read(ackbuf, CSMA_ACK_LEN);
@@ -560,5 +547,4 @@ csma_output_init(void)
   memb_init(&packet_memb);
   memb_init(&metadata_memb);
   memb_init(&neighbor_memb);
-  queuebuf_init();
 }

@@ -42,6 +42,7 @@
 #include "net/packetbuf.h"
 #include "net/linkaddr.h"
 #include "net/netstack.h"
+#include "net/mac/tsch/tsch.h"
 #include "sys/energest.h"
 #include "dev/cc2538-rf.h"
 #include "dev/rfcore.h"
@@ -138,6 +139,8 @@ static const output_config_t output_power[] = {
   {-15, 0x42 },
   {-24, 0x00 },
 };
+
+static radio_result_t get_value(radio_param_t param, radio_value_t *value);
 
 #define OUTPUT_CONFIG_COUNT (sizeof(output_power) / sizeof(output_config_t))
 
@@ -391,6 +394,48 @@ get_sfd_timestamp(void)
   sfd |= (buffer << 32);
 
   return RTIMER_NOW() - RADIO_TO_RTIMER(timer_val - sfd);
+}
+/*---------------------------------------------------------------------------*/
+/* Enable or disable radio test mode emmiting modulated or unmodulated
+ * (carrier) signal. See User's Guide pages 719 and 741.
+ */
+static uint32_t prev_FRMCTRL0, prev_MDMTEST1;
+static uint8_t was_on;
+
+static void
+set_test_mode(uint8_t enable, uint8_t modulated)
+{
+  radio_value_t mode;
+  get_value(RADIO_PARAM_POWER_MODE, &mode);
+
+  if(enable) {
+    if(mode == RADIO_POWER_MODE_CARRIER_ON) {
+      return;
+    }
+    was_on = (mode == RADIO_POWER_MODE_ON);
+    off();
+    prev_FRMCTRL0 = REG(RFCORE_XREG_FRMCTRL0);
+    /* This constantly transmits random data */
+    REG(RFCORE_XREG_FRMCTRL0) = 0x00000042;
+    if(!modulated) {
+      prev_MDMTEST1 = REG(RFCORE_XREG_MDMTEST1);
+      /* ...adding this we send an unmodulated carrier instead */
+      REG(RFCORE_XREG_MDMTEST1) = 0x00000018;
+    }
+    CC2538_RF_CSP_ISTXON();
+  } else {
+    if(mode != RADIO_POWER_MODE_CARRIER_ON) {
+      return;
+    }
+    CC2538_RF_CSP_ISRFOFF();
+    REG(RFCORE_XREG_FRMCTRL0) = prev_FRMCTRL0;
+    if(!modulated) {
+      REG(RFCORE_XREG_MDMTEST1) = prev_MDMTEST1;
+    }
+    if(was_on) {
+      on();
+    }
+  }
 }
 /*---------------------------------------------------------------------------*/
 /* Netstack API radio driver functions */
@@ -805,8 +850,12 @@ get_value(radio_param_t param, radio_value_t *value)
 
   switch(param) {
   case RADIO_PARAM_POWER_MODE:
-    *value = (REG(RFCORE_XREG_RXENABLE) && RFCORE_XREG_RXENABLE_RXENMASK) == 0
-      ? RADIO_POWER_MODE_OFF : RADIO_POWER_MODE_ON;
+    if((REG(RFCORE_XREG_RXENABLE) & RFCORE_XREG_RXENABLE_RXENMASK) == 0) {
+      *value = RADIO_POWER_MODE_OFF;
+    } else {
+      *value = (REG(RFCORE_XREG_FRMCTRL0) & RFCORE_XREG_FRMCTRL0_TX_MODE) == 0
+        ? RADIO_POWER_MODE_ON : RADIO_POWER_MODE_CARRIER_ON;
+    }
     return RADIO_RESULT_OK;
   case RADIO_PARAM_CHANNEL:
     *value = (radio_value_t)get_channel();
@@ -862,6 +911,21 @@ get_value(radio_param_t param, radio_value_t *value)
   case RADIO_CONST_TXPOWER_MAX:
     *value = OUTPUT_POWER_MAX;
     return RADIO_RESULT_OK;
+  case RADIO_CONST_PHY_OVERHEAD:
+    *value = (radio_value_t)3; /* 1 len byte, 2 bytes CRC */
+    return RADIO_RESULT_OK;
+  case RADIO_CONST_BYTE_AIR_TIME:
+    *value = (radio_value_t)32; /* 250kbps data rate. One byte = 32us.*/
+    return RADIO_RESULT_OK;
+  case RADIO_CONST_DELAY_BEFORE_TX:
+    *value = (radio_value_t)CC2538_DELAY_BEFORE_TX;
+    return RADIO_RESULT_OK;
+  case RADIO_CONST_DELAY_BEFORE_RX:
+    *value = (radio_value_t)CC2538_DELAY_BEFORE_RX;
+    return RADIO_RESULT_OK;
+  case RADIO_CONST_DELAY_BEFORE_DETECT:
+    *value = (radio_value_t)CC2538_DELAY_BEFORE_DETECT;
+    return RADIO_RESULT_OK;
   default:
     return RADIO_RESULT_NOT_SUPPORTED;
   }
@@ -878,6 +942,11 @@ set_value(radio_param_t param, radio_value_t value)
     }
     if(value == RADIO_POWER_MODE_OFF) {
       off();
+      return RADIO_RESULT_OK;
+    }
+    if(value == RADIO_POWER_MODE_CARRIER_ON ||
+       value == RADIO_POWER_MODE_CARRIER_OFF) {
+      set_test_mode((value == RADIO_POWER_MODE_CARRIER_ON), 0);
       return RADIO_RESULT_OK;
     }
     return RADIO_RESULT_INVALID_VALUE;
@@ -956,6 +1025,16 @@ get_object(radio_param_t param, void *dest, size_t size)
     *(rtimer_clock_t *)dest = get_sfd_timestamp();
     return RADIO_RESULT_OK;
   }
+
+#if MAC_CONF_WITH_TSCH
+  if(param == RADIO_CONST_TSCH_TIMING) {
+    if(size != sizeof(uint16_t *) || !dest) {
+      return RADIO_RESULT_INVALID_VALUE;
+    }
+    *(const uint16_t **)dest = tsch_timeslot_timing_us_10000;
+    return RADIO_RESULT_OK;
+  }
+#endif /* MAC_CONF_WITH_TSCH */
 
   return RADIO_RESULT_NOT_SUPPORTED;
 }
