@@ -565,9 +565,11 @@ const uint_least8_t NVS_count = KEYSTONE_R1_NVSCOUNT;
 
 const PIN_Config BoardGpioInitTable[] = {
 
+#if 0 /* LED initialized through GPIO hal. Leave them tri-state at startup (off). */
     /* LED */
-    KEYSTONE_R1_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
-    KEYSTONE_R1_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
+    KEYSTONE_R1_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
+    KEYSTONE_R1_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
+#endif
 
 #if 0
     /* Buttons */

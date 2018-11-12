@@ -29,7 +29,7 @@
 #include "lora-radio.h"
 #include "sx126x.h"
 #include "sx126x-board.h"
-#include "LoRaMacContiki.h"
+#include "os/net/mac/lora/LoRaMacContiki.h"
 
 /*!
  * \brief Initializes the radio
