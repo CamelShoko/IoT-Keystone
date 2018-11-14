@@ -44,6 +44,9 @@
 #include "bme280-arch.h"
 #include "lib/sensors.h"
 
+
+bme280_mea_t bme280_mea;
+
 static struct {
   unsigned short dig_t1;
   signed short dig_t2;
