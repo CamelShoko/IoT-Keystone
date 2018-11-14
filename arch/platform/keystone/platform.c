@@ -99,6 +99,12 @@ SPI_Handle hSpiInternal;
 SPI_Handle hSpiSensor;
 
 /*---------------------------------------------------------------------------*/
+/* List of all sensors in the Keystone platform to bind with
+ * the sensor module 
+ */
+SENSORS(&bme280_sensor);
+
+/*---------------------------------------------------------------------------*/
 
 /*
  * \brief  Fade a specified LED.

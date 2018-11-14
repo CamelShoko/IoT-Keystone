@@ -23,4 +23,7 @@ BOARD_TYPE = BOARD_SENSORTAG
 # leds-arch.c etc.
 BOARD_SOURCEFILES += leds-arch.c
 
+# Use the Contiki BME-280 driver.
+MODULES += arch/dev/bme280
+
 
