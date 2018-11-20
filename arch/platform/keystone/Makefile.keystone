@@ -28,7 +28,7 @@ include $(BOARD_PATH)/Makefile.$(notdir $(BOARD))
 DEVICE_FAMILY_LC := $(shell echo "$(DEVICE_FAMILY)" | tr A-Z a-z)
 
 # Add to the source dirs
-TARGET_FAMILY_DIRS += sensors
+TARGET_FAMILY_DIRS += dev
 TARGET_FAMILY_DIRS += lora
 TARGET_FAMILY_DIRS += $(BOARD)
 
@@ -55,7 +55,7 @@ CONTIKI_TARGET_SOURCEFILES += batmon-sensor.c
 CONTIKI_TARGET_SOURCEFILES += $(BOARD_SOURCEFILES)
 
 # Build the sensor drivers
-
+CONTIKI_TARGET_SOURCEFILES += bme280-arch.c
 
 # Build the lora driver
 CONTIKI_TARGET_SOURCEFILES += lora-radio.c sx126x.c lora-delay.c lora-timer.c 

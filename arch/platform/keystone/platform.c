@@ -102,7 +102,10 @@ SPI_Handle hSpiSensor;
 /* List of all sensors in the Keystone platform to bind with
  * the sensor module 
  */
+
+#if 0 /* NO.  This sensor driver is poorly designed. Use API directly. */
 SENSORS(&bme280_sensor);
+#endif
 
 /*---------------------------------------------------------------------------*/
 
@@ -226,8 +229,8 @@ platform_init_stage_one(void)
 #endif
 #if TI_SPI_CONF_ENABLE
   SPI_init();
-  spi_open(0, &hSpiInternal, 16000000); /* max speed SX1262*/
-  spi_open(1, &hSpiSensor, 7000000); /* max speed ICM20948 */
+  spi_open(0, &hSpiInternal, 16000000); /* max speed SX1262=16MHz*/
+  spi_open(1, &hSpiSensor, 4000000); /* max speed ICM20948=7MHz */
   if (hSpiInternal == NULL || hSpiSensor == NULL) {
       /*
       * Something is seriously wrong if SPI initialization fails.
