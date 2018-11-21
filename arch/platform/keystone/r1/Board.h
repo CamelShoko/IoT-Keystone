@@ -99,7 +99,6 @@ extern "C" {
 #define Board_GPTIMER3B         KEYSTONE_R1_GPTIMER3B
 
 #define Board_I2C0              KEYSTONE_R1_I2C0
-#define Board_I2C_TMP           Board_I2C0
 
 #define Board_NVSINTERNAL       KEYSTONE_R1_NVSCC26XX0
 #define Board_NVSEXTERNAL       KEYSTONE_R1_NVSSPI25X0
@@ -158,8 +157,7 @@ extern "C" {
 #define BOARD_LORA_TXCO_WAKEUP_TIME KEYSTONE_R1_LORA_TXCO_WAKEUP_TIME 
 
 /* Board specific I2C addresses */
-#define Board_TMP_ADDR          (0x40)
-#define Board_SENSORS_BP_TMP_ADDR Board_TMP_ADDR
+#define Board_OPT3001_ADDR      (0x44)
 
 #ifdef __cplusplus
 }

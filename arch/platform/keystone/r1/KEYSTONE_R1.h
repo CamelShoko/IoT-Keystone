@@ -53,6 +53,7 @@ extern "C" {
 #include "contiki-conf.h"
 
 /* Includes */
+#include <ti/drivers/I2C.h>
 #include <ti/drivers/SPI.h>
 #include <ti/drivers/PIN.h>
 #include <ti/devices/DeviceFamily.h>
@@ -64,6 +65,7 @@ extern const PIN_Config BoardGpioInitTable[];
 /* Singleton instance handles for device drivers SPI, I2C, I2S */
 extern SPI_Handle hSpiInternal;
 extern SPI_Handle hSpiSensor;
+extern I2C_Handle hI2cSensor;
 
 /* Defines */
 #define KEYSTONE_R1

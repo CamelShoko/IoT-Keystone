@@ -54,10 +54,24 @@
 /*---------------------------------------------------------------------------*/
 
 static bool bme_available = false;
+static bool opt3001_available = false;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(data_logger_process, "data logger");
 AUTOSTART_PROCESSES(&data_logger_process);
+
+/*---------------------------------------------------------------------------*/
+static void
+get_light_reading()
+{
+    int value = opt_3001_sensor.value(0);
+    if (value != OPT_3001_READING_ERROR) {
+        printf("OPT: Light=%d.%02d lux\n", value / 100, value % 100);
+    }
+    else {
+        printf("OPT: Light Read Error\n");
+    }
+}
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(data_logger_process, ev, data)
@@ -68,11 +82,11 @@ PROCESS_THREAD(data_logger_process, ev, data)
     static struct etimer sample_timer;
 
     PRINTF("Starting Data Logger DEMO\n");
-
-
-
+    
     etimer_set(&sample_timer, CLOCK_SECOND * 5);
 
+    /* start with 1 Hz toggle. On any sensor error set to 2 Hz toggle */
+    etimer_set(&led_timer, CLOCK_SECOND * 1);
 
     while (1) {
         PROCESS_YIELD();
@@ -84,37 +98,66 @@ PROCESS_THREAD(data_logger_process, ev, data)
             }
             if (etimer_expired(&sample_timer)) {
                 etimer_reset(&sample_timer);
-                PRINTF("Sampling sensors\n");
-                
+                PRINTF("[time %02lu:%02lu:%02lu.%03lu] Sampling sensors ---------- \n", 
+                    (clock_time() / CLOCK_SECOND / 3600),
+                    (clock_time() / CLOCK_SECOND / 60) % 60,
+                    (clock_time() / CLOCK_SECOND) % 60,
+                    ((clock_time() * 1000) / CLOCK_SECOND) % 1000);
+
                 /*-----BME280---------------------------------*/
 
-                /* Access BME measurement structure directly. */
-                if (bme_available) {
-                    bme280_read(BME280_MODE_WEATHER);
-                    //int temp = bme280_mea.t_overscale100 / 100;
-                    //int hum = bme280_mea.h_overscale1024 >> 10;
-                    //int pres = bme280_mea.p_overscale256 / 256;
-                    PRINTF("T_BME280=%lu.%lu", bme280_mea.t_overscale100 / 100, bme280_mea.t_overscale100 % 100);
-                    PRINTF(" RH_BME280=%lu.%lu", bme280_mea.h_overscale1024 / 1024, bme280_mea.h_overscale1024 % 1024);
-                    PRINTF(" P_BME280=%lu.%lu\n", bme280_mea.p_overscale256 / 256, bme280_mea.p_overscale256 % 256);
-                }
-                else {
+                if (!bme_available) {
                     /* Use Contiki-NG BME driver directly, as the sensor interface is poorly designed. */
                     int result = bme280_init(BME280_MODE_WEATHER);
                     if (result) {
                         bme_available = true;
                         PRINTF("BME280 found.\n");
-                        etimer_set(&led_timer, CLOCK_SECOND * 1);
                     }
                     else {
                         PRINTF("BME280 not found.\n");
                         etimer_set(&led_timer, CLOCK_SECOND / 2);
                     }
-
                 }
 
+                if (bme_available) {
+                    bme280_read(BME280_MODE_WEATHER);
+                    /* Access BME measurement structure directly. */
+                    //int temp = bme280_mea.t_overscale100 / 100;
+                    //int hum = bme280_mea.h_overscale1024 >> 10;
+                    //int pres = bme280_mea.p_overscale256 / 256;
+                    PRINTF("T_BME280=%lu.%lu C", bme280_mea.t_overscale100 / 100, bme280_mea.t_overscale100 % 100);
+                    PRINTF(" RH_BME280=%lu.%lu %%RH", bme280_mea.h_overscale1024 / 1024, bme280_mea.h_overscale1024 % 1024);
+                    PRINTF(" P_BME280=%lu.%lu Pa\n", bme280_mea.p_overscale256 / 256, bme280_mea.p_overscale256 % 256);
+                }
 
+                /*-----OPT3001---------------------------------*/
+
+                if (!opt3001_available) {
+                    /* Identify the sensor. */
+                    int result = opt_3001_sensor.status(OPT_3001_IDENTIFY);
+                    if (result) {
+                        opt3001_available = true;
+                        PRINTF("opt3001 found. mfg=%04x dev=%04x\n",
+                            (result >> 16) & 0xffff, result & 0xffff);
+                    }
+                    else {
+                        PRINTF("opt3001 not found. result=%d\n", result);
+                        etimer_set(&led_timer, CLOCK_SECOND / 2);
+                    }
+                }
+
+                if (opt3001_available) {
+                    /* Trigger a read cycle.  The result will come back shortly
+                    * as an event.
+                    */
+                    SENSORS_ACTIVATE(opt_3001_sensor);
+                }
             }
+        } else if (ev == sensors_event) {
+            if (data == &opt_3001_sensor) {
+                get_light_reading();
+            }
+            
         }
     }
 

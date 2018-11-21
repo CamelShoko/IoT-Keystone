@@ -85,7 +85,7 @@
 /*---------------------------------------------------------------------------*/
 /* Log configuration */
 #include "sys/log.h"
-#define LOG_MODULE "CC13xx/CC26xx"
+#define LOG_MODULE "IoT.Keystone"
 #define LOG_LEVEL LOG_LEVEL_MAIN
 /*---------------------------------------------------------------------------*/
 /*
@@ -97,15 +97,20 @@ extern void Board_initHook(void);
 /* Singleton instance handles for device drivers SPI, I2C, I2S */
 SPI_Handle hSpiInternal;
 SPI_Handle hSpiSensor;
+I2C_Handle hI2cSensor;
 
 /*---------------------------------------------------------------------------*/
 /* List of all sensors in the Keystone platform to bind with
  * the sensor module 
  */
 
-#if 0 /* NO.  This sensor driver is poorly designed. Use API directly. */
-SENSORS(&bme280_sensor);
-#endif
+/* Note: BME280 sensor driver is poorly designed:
+ *   - Initialization is triggered at sensors process start and we can't
+ *     detect failures there.
+ *   - Value function triggers full readout but only returns one value.
+ * Use its bme280.h API directly.
+ */
+SENSORS(/* &bme280_sensor, */ &opt_3001_sensor);
 
 /*---------------------------------------------------------------------------*/
 
@@ -188,6 +193,24 @@ spi_open(uint8_t index, SPI_Handle* hInst, uint32_t bitRate)
     */
     *hInst = SPI_open(index, &spi_params);
 }
+
+/*---------------------------------------------------------------------------*/
+
+/*
+ * Open the single I2C instance as a master to manage all traffic.
+ */
+static void
+i2c_open()
+{
+    I2C_Params i2c_params;
+    I2C_Params_init(&i2c_params);
+
+    i2c_params.transferMode = I2C_MODE_BLOCKING;
+    i2c_params.bitRate = I2C_400kHz;
+
+    hI2cSensor = I2C_open(Board_I2C0, &i2c_params);
+}
+
 /*---------------------------------------------------------------------------*/
 
 void
@@ -226,6 +249,13 @@ platform_init_stage_one(void)
 #endif
 #if TI_I2C_CONF_ENABLE
   I2C_init();
+  i2c_open();
+  if (hI2cSensor == NULL) {
+      /*
+      * Something is seriously wrong if I2C initialization fails.
+      */
+      for (;;) { /* hang */ }
+  }
 #endif
 #if TI_SPI_CONF_ENABLE
   SPI_init();
@@ -307,18 +337,14 @@ platform_init_stage_three(void)
 #endif
 
   NETSTACK_RADIO.get_value(RADIO_PARAM_CHANNEL, &chan);
-  LOG_INFO("RF: Channel %d", chan);
+  LOG_INFO("RF: Channel %d\n", chan);
 
   if(NETSTACK_RADIO.get_value(RADIO_PARAM_PAN_ID, &pan) == RADIO_RESULT_OK) {
-    LOG_INFO(", PANID 0x%04X", pan);
+    LOG_INFO("PANID 0x%04X\n", pan);
   }
-  LOG_INFO("\n");
-
   LOG_INFO("Node ID: %d\n", node_id);
 
-#if BOARD_CONF_SENSORS_ENABLE
   process_start(&sensors_process, NULL);
-#endif
 
   fade(Board_PIN_LED1);
 }

@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2018, Texas Instruments Incorporated - http://www.ti.com/
  * Copyright (c) 2018, This. Is. IoT. - https://thisisiot.io
  * All rights reserved.
  *
@@ -29,21 +28,19 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- * \addtogroup cc13xx-cc26xx-platform
+ * \addtogroup keystone-platform
  * @{
  *
- * \defgroup launchpad-peripherals LaunchPad peripherals
+ * \defgroup Keystone R1 board peripherals
  *
- *        Defines related to configuring LaunchPad peripherals. All
- *        LaunchPads are identical to a very large extent. Everything
- *        documented within this group applies to all LaunchPads.
+ *        Defines related to configuring Keystone peripherals.
  *
  * @{
  *
  * \file
- *        Header file with definitions related to LaunchPad boards.
+ *        Header file with definitions related to Keystone boards.
  * \author
- *        Edvard Pettersen <e.pettersen@ti.com>
+ *        Evan Ross <evan@thisisiot.io>
  */
 /*---------------------------------------------------------------------------*/
 #ifndef BOARD_PERIPHERALS_H_
@@ -51,7 +48,8 @@
 /*---------------------------------------------------------------------------*/
 #include "board-conf.h"
 /*---------------------------------------------------------------------------*/
-#include "arch/dev/bme280/bme280-sensor.h"
+#include "arch/dev/bme280/bme280-sensor.h" /* exposes bme280.h as well */
+#include "opt-3001-sensor.h"
 
 /*---------------------------------------------------------------------------*/
 #endif /* BOARD_PERIPHERALS_H_ */
