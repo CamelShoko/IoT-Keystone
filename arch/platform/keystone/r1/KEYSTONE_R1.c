@@ -390,7 +390,7 @@ const GPTimerCC26XX_Config GPTimerCC26XX_config[KEYSTONE_R1_GPTIMERPARTSCOUNT] =
 
 /*
  *  =============================== I2C ===============================
-*/
+ */
 #include <ti/drivers/I2C.h>
 #include <ti/drivers/i2c/I2CCC26XX.h>
 
@@ -910,6 +910,57 @@ const Watchdog_Config Watchdog_config[KEYSTONE_R1_WATCHDOGCOUNT] = {
 };
 
 const uint_least8_t Watchdog_count = KEYSTONE_R1_WATCHDOGCOUNT;
+
+
+/*
+*  =============================== PDM ===============================
+*/
+#include "PDMCC26XX_contiki.h"
+
+PDMCC26XX_Object PDMCC26xxObjects[KEYSTONE_R1_I2SCOUNT];
+
+const PDMCC26XX_HWAttrs PDMCC26xxHWAttrs[KEYSTONE_R1_I2SCOUNT] = {
+    {
+        .micPower = PIN_UNASSIGNED,
+        .taskPriority = 0,
+    },
+};
+
+const PDMCC26XX_Config PDMCC26XX_config[KEYSTONE_R1_I2SCOUNT] = {
+    {
+        .object = &PDMCC26xxObjects[KEYSTONE_R1_I2S0],
+        .hwAttrs = &PDMCC26xxHWAttrs[KEYSTONE_R1_I2S0]
+    },
+};
+
+
+/*
+*  =============================== I2S ===============================
+*/
+#include "PDMCC26XX_util_contiki.h"
+
+PDMCC26XX_I2S_Object i2sCC26xxObjects[KEYSTONE_R1_I2SCOUNT];
+
+const PDMCC26XX_I2S_HWAttrs i2sCC26xxHWAttrs[KEYSTONE_R1_I2SCOUNT] = {
+    {
+        .baseAddr = I2S0_BASE,
+        .powerMngrId = PowerCC26XX_PERIPH_I2S,
+        .intNum = INT_I2S_IRQ,
+        .intPriority = ~0,
+        .mclkPin = PIN_UNASSIGNED,
+        .bclkPin = PIN_UNASSIGNED,
+        .wclkPin = PIN_UNASSIGNED,
+        .ad0Pin = PIN_UNASSIGNED,
+    },
+};
+
+const PDMCC26XX_I2S_Config PDMCC26XX_I2S_config[KEYSTONE_R1_I2SCOUNT] = {
+    {
+        .object = &i2sCC26xxObjects[KEYSTONE_R1_I2S0],
+        .hwAttrs = &i2sCC26xxHWAttrs[KEYSTONE_R1_I2S0]
+    },
+};
+
 
 /*
  *  Board-specific initialization function to disable external flash.

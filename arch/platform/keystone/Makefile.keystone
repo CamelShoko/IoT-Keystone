@@ -57,6 +57,11 @@ CONTIKI_TARGET_SOURCEFILES += $(BOARD_SOURCEFILES)
 # Build the sensor drivers
 CONTIKI_TARGET_SOURCEFILES += bme280-arch.c
 CONTIKI_TARGET_SOURCEFILES += opt-3001-sensor.c
+CONTIKI_TARGET_SOURCEFILES += audio-sensor.c
+CONTIKI_TARGET_SOURCEFILES += PDMCC26XX_contiki.c
+CONTIKI_TARGET_SOURCEFILES += PDMCC26XX_util_contiki.c
+CONTIKI_TARGET_SOURCEFILES += pdm2pcm_cc26x2_gnu.s
+
 
 # Build the lora driver
 CONTIKI_TARGET_SOURCEFILES += lora-radio.c sx126x.c lora-delay.c lora-timer.c 

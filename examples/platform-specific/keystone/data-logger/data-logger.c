@@ -88,6 +88,9 @@ PROCESS_THREAD(data_logger_process, ev, data)
     /* start with 1 Hz toggle. On any sensor error set to 2 Hz toggle */
     etimer_set(&led_timer, CLOCK_SECOND * 1);
 
+    /* start audio streaming from the microphone */
+    SENSORS_ACTIVATE(audio_sensor);
+
     while (1) {
         PROCESS_YIELD();
 
@@ -156,6 +159,26 @@ PROCESS_THREAD(data_logger_process, ev, data)
         } else if (ev == sensors_event) {
             if (data == &opt_3001_sensor) {
                 get_light_reading();
+            }
+            else if (data == &audio_sensor) {
+                /* buffer is ready */
+                /* in case we were latent somehow ?? read and process buffers until
+                 * there are no more. */
+                int result = audio_sensor.value(AUDIO_SENSOR_GET_BUFFER);
+                while (result != AUDIO_SENSOR_READING_ERROR &&
+                    result != AUDIO_SENSOR_NO_BUFFER)
+                {
+                    audio_sensor_buffer* buf = (audio_sensor_buffer*)result;
+
+                    // do something with it
+                    //...
+                    PRINTF("audio buffer: %d\n", buf->metaData.seqNum);
+                    // Put it back
+                    audio_sensor.value(AUDIO_SENSOR_PUT_BUFFER);
+
+                    // See if there is another one.
+                    result = audio_sensor.value(AUDIO_SENSOR_GET_BUFFER);
+                }
             }
             
         }

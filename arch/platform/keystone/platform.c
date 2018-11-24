@@ -71,6 +71,7 @@
 #include <ti/drivers/SPI.h>
 #include <ti/drivers/TRNG.h>
 #include <ti/drivers/UART.h>
+#include "PDMCC26XX_contiki.h"
 /*---------------------------------------------------------------------------*/
 #include "board-peripherals.h"
 #include "uart0-arch.h"
@@ -110,7 +111,7 @@ I2C_Handle hI2cSensor;
  *   - Value function triggers full readout but only returns one value.
  * Use its bme280.h API directly.
  */
-SENSORS(/* &bme280_sensor, */ &opt_3001_sensor);
+SENSORS(/* &bme280_sensor, */ &opt_3001_sensor, &audio_sensor);
 
 /*---------------------------------------------------------------------------*/
 
@@ -271,6 +272,10 @@ platform_init_stage_one(void)
 #if TI_NVS_CONF_ENABLE
   NVS_init();
 #endif
+  /* Init PDM driver and I2S hardware as per TI driver procedure.
+   * Audio sensor driver is responsible for opening an instance. 
+   */
+  PDMCC26XX_Contiki_init((PDMCC26XX_Handle)&PDMCC26XX_config[0]);
 
   TRNG_init();
 

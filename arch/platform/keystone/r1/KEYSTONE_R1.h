@@ -465,6 +465,15 @@ typedef enum KEYSTONE_R1_WatchdogName {
     KEYSTONE_R1_WATCHDOGCOUNT
 } KEYSTONE_R1_WatchdogName;
 
+/*!
+*  @def    KEYSTONE_R1_I2SName
+*  @brief  Enum of I2S names
+*/
+typedef enum KEYSTONE_R1_I2SName {
+    KEYSTONE_R1_I2S0 = 0,
+
+    KEYSTONE_R1_I2SCOUNT
+} KEYSTONE_R1_I2SName;
 
 #ifdef __cplusplus
 }

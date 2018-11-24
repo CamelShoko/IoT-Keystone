@@ -50,6 +50,7 @@
 /*---------------------------------------------------------------------------*/
 #include "arch/dev/bme280/bme280-sensor.h" /* exposes bme280.h as well */
 #include "opt-3001-sensor.h"
+#include "audio-sensor.h"
 
 /*---------------------------------------------------------------------------*/
 #endif /* BOARD_PERIPHERALS_H_ */
