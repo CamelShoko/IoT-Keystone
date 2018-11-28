@@ -119,13 +119,24 @@ sensor_init(void)
 
   pdmParams.callbackFxn = bufRdy_callback;
   pdmParams.micPowerActiveHigh = true;
-  pdmParams.applyCompression = true;
+  //pdmParams.applyCompression = true;
+  pdmParams.applyCompression = false;
   pdmParams.retBufSizeInBytes = AUDIO_SENSOR_RET_BUF_SIZE;
   pdmParams.mallocFxn = &malloc_fxn;
   pdmParams.freeFxn = &free_fxn;
+  pdmParams.pdmBufferQueueDepth = 6; /* default is 3, but we need more to handle potential application latency */
   
-  // Configure the params to use 8kHz PCM output (4 ms buffer period instead of 2 ms)
+#if 0
+  /* Configure the params to use 8kHz PCM output (4 ms buffer period instead of 2 ms) */
   pdmParams.pcmSampleRate = PDMCC26XX_PCM_SAMPLE_RATE_8K;
+#else
+  /* Configure the params to use 16kHz PCM output (2 ms buffer period)  
+   * We do this because the microphone sample clock needs to be high enough
+   * to trigger exit from sleep.  8 KHz doesn't cut it (1.024 MHz).
+   */
+  /* NOTE! This does not affect the PDM sample clock (BCLK)! */
+  pdmParams.pcmSampleRate = PDMCC26XX_PCM_SAMPLE_RATE_16K;
+#endif
 
   pdm_handle = PDMCC26XX_Contiki_open(&pdmParams);
   if(pdm_handle == NULL) {

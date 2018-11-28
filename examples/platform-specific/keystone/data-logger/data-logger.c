@@ -170,9 +170,16 @@ PROCESS_THREAD(data_logger_process, ev, data)
                 {
                     audio_sensor_buffer* buf = (audio_sensor_buffer*)result;
 
+                    static int count = 0;
                     // do something with it
                     //...
-                    PRINTF("audio buffer: %d\n", buf->metaData.seqNum);
+                    if ((++count % 100) == 0) {
+                        /* Slow down console output to avoid dropping buffers.
+                         * Need to increase the number of buffers in the driver since this
+                         * PRINTF can cause relatively signficant delay (as buffers arrive sub 10 ms).
+                         */
+                        PRINTF("audio buffer: %d (count=%d)\n", buf->metaData.seqNum, count);
+                    }
                     // Put it back
                     audio_sensor.value(AUDIO_SENSOR_PUT_BUFFER);
 

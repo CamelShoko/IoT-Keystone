@@ -169,17 +169,12 @@ PDMCC26XX_I2S_Handle PDMCC26XX_I2S_Contiki_open(PDMCC26XX_I2S_Handle handle, PDM
     object = handle->object;
     hwAttrs = handle->hwAttrs;
 
-    /* Disable preemption while checking if the I2S is open. */
-    uint32_t key = HwiP_disable();
     /* Check if the I2S is open already with the base addr. */
     if (object->isOpen == true) {
-        HwiP_restore(key);
-
         return (NULL);
     }
     /* Mark the handle as in use */
     object->isOpen = true;
-    HwiP_restore(key);
 
     /* Initialize the I2S object */
     object->requestMode                 = params->requestMode;
@@ -236,7 +231,6 @@ PDMCC26XX_I2S_Handle PDMCC26XX_I2S_Contiki_open(PDMCC26XX_I2S_Handle handle, PDM
 
     /* Try to allocate memory for the PDM buffers */
     if (!PDMCC26XX_I2S_allocateBuffers(handle)){
-        HwiP_restore(key);
 
         return NULL;
     }
@@ -257,9 +251,7 @@ PDMCC26XX_I2S_Handle PDMCC26XX_I2S_Contiki_open(PDMCC26XX_I2S_Handle handle, PDM
         Power_releaseDependency(hwAttrs->powerMngrId);
 
         /* Mark the module as available */
-        key = HwiP_disable();
         object->isOpen = false;
-        HwiP_restore(key);
 
         /* Signal back to application that I2S driver was not succesfully opened */
         return (NULL);
@@ -313,9 +305,6 @@ static void PDMCC26XX_I2S_deallocateBuffers(PDMCC26XX_I2S_Handle handle){
     /* Get the pointer to the object */
     object = handle->object;
 
-    /* If we do not use a critical section, the thread may be pre-empted between the QueueP_empty() check and the QueueP_dequeue call. */
-    uint32_t key = HwiP_disable();
-
     /* Empty the available queue and free the memory of the queue elements and the buffers */
     while (!QueueP_empty(i2sBlockEmptyQueue)) {
         PDMCC26XX_I2S_QueueNode *availableNode = (PDMCC26XX_I2S_QueueNode *)QueueP_dequeue(i2sBlockEmptyQueue);
@@ -352,7 +341,6 @@ static void PDMCC26XX_I2S_deallocateBuffers(PDMCC26XX_I2S_Handle handle){
         i2sBlockNext = NULL;
     }
 
-    HwiP_restore(key);
 }
 
 /*
@@ -371,7 +359,8 @@ static bool PDMCC26XX_I2S_allocateBuffers(PDMCC26XX_I2S_Handle handle){
 
     Assert_isTrue(object->isOpen, NULL);
 
-    PRINTF("DMCC26XX_I2S_allocateBuffers [%d buffers]\n", object->blockCount);
+    PRINTF("DMCC26XX_I2S_allocateBuffers [%d buffers @ %d bytes each]\n", object->blockCount, 
+        object->blockSizeInBytes + sizeof(PDMCC26XX_I2S_QueueNode));
 
     /* Allocate the PDM block buffers and queue elements. The application provided malloc and free functions permit for both static and dynamic allocation.
      * The PDM block buffers are allocated individually. Despite the increased book-keeping overhead incurred for this in the malloc function,
@@ -450,15 +439,22 @@ void PDMCC26XX_I2S_Contiki_close(PDMCC26XX_I2S_Handle handle) {
     object->isOpen = false;
 }
 
+volatile int numHwiFxnInts = 0;
+volatile uint32_t lastIntStatus = 0;
+volatile int numHwiFxnDropped = 0;
+volatile int numHwiFxnErr = 0;
 /*
  *  ======== PDMCC26XX_I2S_hwiFxn ========
  *  ISR for the I2S
  */
 static void PDMCC26XX_I2S_hwiFxn (UArg arg) {
+
     PDMCC26XX_I2S_StreamNotification *notification;
     PDMCC26XX_I2S_Object        *object;
     PDMCC26XX_I2S_HWAttrs const *hwAttrs;
     uint32_t                    intStatus;
+
+    numHwiFxnInts++;
 
     /* Get the pointer to the object and hwAttrs */
     object = ((PDMCC26XX_I2S_Handle)arg)->object;
@@ -471,6 +467,8 @@ static void PDMCC26XX_I2S_hwiFxn (UArg arg) {
     intStatus = I2SIntStatus(hwAttrs->baseAddr, true);
     I2SIntClear(hwAttrs->baseAddr, intStatus);
 
+    lastIntStatus = intStatus;
+#if 1
     if (intStatus & I2S_IRQMASK_AIF_DMA_IN) {
         Assert_isTrue(i2sBlockActive, NULL);
 
@@ -492,6 +490,7 @@ static void PDMCC26XX_I2S_hwiFxn (UArg arg) {
                 object->currentStream->status = PDMCC26XX_I2S_STREAM_BUFFER_READY;
             }
             else {
+                numHwiFxnDropped++;
                 /* If there is no empty buffer available, there should be full buffers we could drop. */
                 Assert_isTrue(!QueueP_empty(i2sBlockFullQueue), NULL);
                 /* The PDM driver did not process the buffers in time. The I2S module needs to drop
@@ -518,6 +517,7 @@ static void PDMCC26XX_I2S_hwiFxn (UArg arg) {
     * Overrun in the RX Fifo -> at least one sample in the shift
     * register has been discarded  */
     if (intStatus & I2S_IRQMASK_PTR_ERR) {
+        numHwiFxnErr++;
         /* disable the interrupt */
         I2SIntDisable(hwAttrs->baseAddr, I2S_INT_PTR_ERR);
         /* Check if we are expecting this interrupt as part of stopping */
@@ -538,6 +538,7 @@ static void PDMCC26XX_I2S_hwiFxn (UArg arg) {
             object->callbackFxn((PDMCC26XX_I2S_Handle)arg, notification);
         }
     }
+#endif
 }
 
 /*
@@ -552,16 +553,16 @@ bool PDMCC26XX_I2S_Contiki_startStream(PDMCC26XX_I2S_Handle handle) {
     Assert_isTrue(i2sBlockFullQueue, NULL);
     Assert_isTrue(i2sBlockEmptyQueue, NULL);
 
+    PRINTF("PDMCC26XX_I2S_startStream [enter]\n");
+
     /* Get the pointer to the object and hwAttr*/
     object = handle->object;
     hwAttrs = handle->hwAttrs;
 
     Assert_isTrue(object->isOpen, NULL);
 
-    /* Disable preemption while checking if a transfer is in progress */
-    uint32_t key = HwiP_disable();
+    /* Checking if a transfer is in progress */
     if (object->currentStream->status != PDMCC26XX_I2S_STREAM_IDLE) {
-        HwiP_restore(key);
 
         /* Flag that the transfer failed to start */
         object->currentStream->status = PDMCC26XX_I2S_STREAM_FAILED;
@@ -579,10 +580,8 @@ bool PDMCC26XX_I2S_Contiki_startStream(PDMCC26XX_I2S_Handle handle) {
     /* Configure the hardware module */
     PDMCC26XX_I2S_initHw(handle);
 
-    key = HwiP_disable();
     /* Configuring sample stamp generator will trigger the audio stream to start */
     I2SSampleStampConfigure(hwAttrs->baseAddr, true, false);
-    HwiP_restore(key);
 
     /* Configure buffers */
     I2SBufferConfig(hwAttrs->baseAddr,
@@ -590,32 +589,38 @@ bool PDMCC26XX_I2S_Contiki_startStream(PDMCC26XX_I2S_Handle handle) {
                     0, 
                     object->blockSizeInSamples,
                     PDMCC26XX_I2S_DEFAULT_SAMPLE_STAMP_MOD);
+
+//#if 0  THIS WORKS TO AVOID CRASH
+
     /* Enable the I2S module. This will set first buffer and DMA length */
     I2SEnable(hwAttrs->baseAddr);
+//#endif
 
+//#if 0 // does this? YES this also avoids crash.
     /* Kick off clocks */
     PRCMAudioClockEnable();
     PRCMLoadSet();
-
+//#endif
     /* Second buffer is then set in hardware after DMA length is set */
     I2SPointerSet(hwAttrs->baseAddr, true, (uint32_t *)i2sBlockNext->buffer);
-
-    HwiP_restore(key);
-
+#if 1 // does this? Yes
     /* Enable the RX overrun interrupt in the I2S module */
     I2SIntEnable(hwAttrs->baseAddr, I2S_INT_DMA_IN | I2S_INT_PTR_ERR);
 
     /* Clear internal pending interrupt flags */
     I2SIntClear(I2S0_BASE, I2S_INT_ALL);
+#endif
 
     /* Enable samplestamp */
     I2SSampleStampEnable(hwAttrs->baseAddr);
 
     /* Clear potential pending I2S interrupt to CM3 */
     HwiP_clearInterrupt(INT_I2S_IRQ);
-
     /* Enable I2S interrupt to CM3 */
     HwiP_enableInterrupt(INT_I2S_IRQ);
+
+
+    PRINTF("PDMCC26XX_I2S_startStream [exit success]\n");
 
     return true;
 }
@@ -630,21 +635,19 @@ bool PDMCC26XX_I2S_Contiki_stopStream(PDMCC26XX_I2S_Handle handle) {
 
     Assert_isTrue(handle, NULL);
 
+    PRINTF("DMCC26XX_I2S_stopStream [enter]\n");
+
     /* Get the pointer to the object and hwAttrs */
     object = handle->object;
     hwAttrs = handle->hwAttrs;
 
     Assert_isTrue(object->isOpen, NULL);
 
-    /* Check if a transfer is in progress */
-    uint32_t key = HwiP_disable();
-
     /* Check if there is an active stream */
     if ( (object->currentStream->status == PDMCC26XX_I2S_STREAM_STOPPING) ||
          (object->currentStream->status == PDMCC26XX_I2S_STREAM_STOPPED) ||
          (object->currentStream->status == PDMCC26XX_I2S_STREAM_IDLE) ) {
 
-        HwiP_restore(key);
         return false;
     }
 
@@ -655,17 +658,12 @@ bool PDMCC26XX_I2S_Contiki_stopStream(PDMCC26XX_I2S_Handle handle) {
         /* Reenable the interrupt as it may have been disabled during an error*/
         I2SIntEnable(hwAttrs->baseAddr, I2S_INT_PTR_ERR);
 
-        HwiP_restore(key);
-
         /* Wait for I2S module to complete all buffers*/
         if (SemaphoreP_OK != SemaphoreP_pend(&(object->semStopping), 40000)) {
             object->currentStream->status = PDMCC26XX_I2S_STREAM_FAILED_TO_STOP;
             return false;
         }
     }
-
-    /* restore HWI */
-    HwiP_restore(key);
 
     /* Flush the blockFullQueue and move those elements to the blockEmptyQueue.
      * Since this function shuts down the driver synchronously by letting it run out
@@ -691,6 +689,8 @@ bool PDMCC26XX_I2S_Contiki_stopStream(PDMCC26XX_I2S_Handle handle) {
 
     /* Indicate we are done with this stream */
     object->currentStream->status = PDMCC26XX_I2S_STREAM_IDLE;
+
+    PRINTF("DMCC26XX_I2S_stopStream [exit success]\n");
 
     /* Stream was successfully stopped */
     return true;
@@ -785,6 +785,9 @@ static void PDMCC26XX_I2S_initHw(PDMCC26XX_I2S_Handle handle) {
     /* Get the pointer to the object and hwAttrs */
     object = handle->object;
     hwAttrs = handle->hwAttrs;
+
+    /* Similarly can't use PRINTF with interrupts shut off */
+    //PRINTF("DMCC26XX_I2S_initHw [enter] object=%p hwAttrs=%p baseAddr=%p\n", object, hwAttrs, (void*)hwAttrs->baseAddr);
 
     /* Disable I2S operation */
     I2SDisable(hwAttrs->baseAddr);

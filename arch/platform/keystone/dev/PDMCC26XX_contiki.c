@@ -107,7 +107,13 @@
  *  set it to 16 as part of the PDMCC26XX module configuration. */
 #define PDM_SAMPLE_SIZE                 16 // 24
 
+typedef enum {
 
+    EventPostType_SYNC, /* post synchronously from one process to another and run immediately as-if by function call */
+    EventPostType_ASYNC, /* post event asynchronously to be run after current process completes. */
+    EventPostType_POLL, /* post event from an ISR. */
+
+} EventPostType_t;
 
 /* Events handled in the PDM task */
 /*! PDM event set in the callback from the PDMCC26XX driver every time a block
@@ -213,6 +219,8 @@ PDMCC26XX_StreamNotification streamNotification = {
 
 volatile uint32_t droppedPdmBlockCount = 0;
 
+volatile uint32_t i2sCallbackFxnCalls = 0;
+
 static PDMCC26XX_I2S_StreamNotification pdmStream;
 static PDMCC26XX_I2S_Handle i2sHandle;
 
@@ -294,10 +302,88 @@ void QueueP_destruct(QueueP_Obj* obj) { }
 /*------------------------------------------------------------------------------------------*/
 /* RTSC Adaptation */
 
+/* Rudimentary event queue.
+ * The ISR can update this at any time, therefore the process must
+ * turn off INTS while it checks this structure.
+ */
+
+
+/* This has to account for some latency in processing the buffers due to application
+ * delays, but should also align with the number of buffers available to the I2S driver.
+ * E.g. having a large number of events queued up here won't prevent loss of data if the
+ * I2S driver only has 1 extra buffer to play with.
+ *
+ * The number of buffers to allocate on startup is controlled by PDMCC26XX driver's
+ * 'pdmBufferQueueDepth' parameter. This is by default 3.
+ */
+#define PDM_MAX_EVENTS  9
+
+volatile process_event_t pdm_post_events[PDM_MAX_EVENTS];
+volatile int pdm_num_posted_events = 0; /* serves as pointer into the queue (array index + 1) */
+
+
+volatile process_event_t lastPostedEvent = 0;
+volatile int lastPostedEventDroppedCnt = 0;
+volatile process_event_t lastPostedEventDropped = 0;
+
+volatile int numtaskFxnLoops = 0;
+volatile int getNewPcmBufferSuccess = 0;
+volatile int getNewPcmBufferFail = 0;
+
 #define Assert_isTrue(...) 
 
+/* Post an event to a process.  
+ * Because this can be called from interrupt context as well, we elect to use
+ * an internal event queue and just deliver all events to the process via
+ * the generic PROCESS_EVENT_POLL.
+ */
 /* The event is already a process_event_t type but may be supplied in a uint32_t */
-#define Event_post(pdmEvents, event) process_post(&PDMCC26XX_taskFxn, (process_event_t)(event), NULL)
+static void Event_post(EventPostType_t type, uint32_t event) { 
+    /* if (lastPostedEvent != 0) { lastPostedEventDropped = lastPostedEvent; lastPostedEventDroppedCnt++; }  */
+    unsigned int key = HwiP_disable();
+    //lastPostedEvent = (process_event_t)event;
+
+    if (pdm_num_posted_events == PDM_MAX_EVENTS) { 
+        /* queue full, record this event as dropped, return. */
+        lastPostedEventDropped = (process_event_t)event; 
+        lastPostedEventDroppedCnt++;
+        HwiP_restore(key);
+        return;
+    }
+    
+    pdm_post_events[pdm_num_posted_events] = (process_event_t)event;
+    pdm_num_posted_events++;
+    HwiP_restore(key);
+
+
+    switch (type) {
+    case EventPostType_POLL:
+        /* Onlt way to interract with process from an ISR!! */
+        process_poll(&PDMCC26XX_taskFxn);
+        break;
+    case EventPostType_SYNC:
+        /* synchronous post, will jump to process immediately. */
+        process_post_synch(&PDMCC26XX_taskFxn, PROCESS_EVENT_POLL, NULL);
+        break;
+    default:
+        /* normal process post, will defer exection until current process completes. */
+        process_post(&PDMCC26XX_taskFxn, PROCESS_EVENT_POLL, NULL);
+        break;
+    }
+} 
+
+static process_event_t Event_get()
+{
+    process_event_t event = 0;
+    unsigned int key = HwiP_disable();
+    if (pdm_num_posted_events > 0) {
+        pdm_num_posted_events--;
+        event = pdm_post_events[pdm_num_posted_events];
+    }
+    HwiP_restore(key);
+    return event;
+}
+
 
 /*------------------------------------------------------------------------------------------*/
 
@@ -341,8 +427,6 @@ void PDMCC26XX_Contiki_init(PDMCC26XX_Handle handle) {
     /* Then initialize I2S driver */
     i2sHandle = (PDMCC26XX_I2S_Handle)&(PDMCC26XX_I2S_config);
     PDMCC26XX_I2S_Contiki_init(i2sHandle);
-
-    process_start(&PDMCC26XX_taskFxn, NULL);
 }
 
 /*
@@ -371,18 +455,14 @@ PDMCC26XX_Handle PDMCC26XX_Contiki_open(PDMCC26XX_Params *params) {
     /* Get the pointer to the object */
     object = handle->object;
 
-    /* Disable preemption while checking if the PDM is open. */
-    uint32_t key = HwiP_disable();
     /* Check if the PDM is open already with the base addr. */
     if (object->isOpen == true) {
-        HwiP_restore(key);
 
         return (NULL);
     }
 
     /* Mark the handle as being used */
     object->isOpen = true;
-    HwiP_restore(key);
 
     /* Initialize the PDM object */
     object->callbackFxn                     = params->callbackFxn;
@@ -406,6 +486,8 @@ PDMCC26XX_Handle PDMCC26XX_Contiki_open(PDMCC26XX_Params *params) {
          * Exit with return value NULL to prevent the driver running with decimationFilterState == NULL
          */
         PDMCC26XX_rollbackDriverInitialisation(handle, PDM_ROLLBACK_OPEN);
+
+        return (NULL);
     }
 
     /* Get first buffer for PCM data so that we don't get NULL
@@ -458,6 +540,9 @@ PDMCC26XX_Handle PDMCC26XX_Contiki_open(PDMCC26XX_Params *params) {
     QueueP_construct(&pcmMsgReady, NULL);
     pcmMsgReadyQueue = QueueP_handle(&pcmMsgReady);
 
+    /* Now start the process */
+    process_start(&PDMCC26XX_taskFxn, NULL);
+
     PRINTF("PDMCC26XX_open [exit success]\n");
 
     return (handle);
@@ -473,10 +558,8 @@ void PDMCC26XX_Contiki_close(PDMCC26XX_Handle handle) {
     Assert_isTrue(handle, NULL);
 
     /* Post close event to shutdown synchronously and prevent resetting settings and datastructures in the middle of a block ready event */
-    Event_post(pdmEvents, PDM_EVT_CLOSE);
+    Event_post(EventPostType_SYNC, PDM_EVT_CLOSE);
 
-    /* Wait for PDM_EVT_CLOSE to take effect */
-    SemaphoreP_pend(&synchronisationSemaphore, SemaphoreP_WAIT_FOREVER);
 }
 
 /*
@@ -498,11 +581,10 @@ bool PDMCC26XX_Contiki_startStream(PDMCC26XX_Handle handle) {
     object = handle->object;
     hwAttrs = handle->hwAttrs;
 
-    /* Disable preemption while checking if a transfer is in progress */
-    uint32_t key = HwiP_disable();
-    if (object->streamStarted) {
-        HwiP_restore(key);
+    PRINTF("PDMCC26XX_startStream [enter]\n");
 
+    /* Disable preemption while checking if a transfer is in progress */
+    if (object->streamStarted) {
         /* Stream is in progress */
         return (false);
     }
@@ -524,6 +606,9 @@ bool PDMCC26XX_Contiki_startStream(PDMCC26XX_Handle handle) {
     metaDataForNextFrame.si = 0;
     metaDataForNextFrame.pv = 0;
 
+    /* Let thread prepare to throw the first PDM_DECIMATION_STARTUP_DELAY_IN_SAMPLES samples */
+    Event_post(EventPostType_SYNC, PDM_EVT_START);
+
     /* Then start stream */
     if (PDMCC26XX_I2S_Contiki_startStream(i2sHandle)) {
         /* Power microphone --> It typically requires some startup time */
@@ -537,15 +622,14 @@ bool PDMCC26XX_Contiki_startStream(PDMCC26XX_Handle handle) {
         /* Make sure to flag that a stream is now active */
         object->streamStarted = true;
 
-        HwiP_restore(key);
-
-        /* Let thread prepare to throw the first PDM_DECIMATION_STARTUP_DELAY_IN_SAMPLES samples */
-        Event_post(pdmEvents, PDM_EVT_START);
+        PRINTF("PDMCC26XX_startStream [exit success]\n");
 
         return true;
     } else {
+
+        PRINTF("PDMCC26XX_startStream [exit fail]\n");
+
         /* If the starting of stream failed, return false*/
-        HwiP_restore(key);
         return false;
     }
 }
@@ -568,21 +652,13 @@ bool PDMCC26XX_Contiki_stopStream(PDMCC26XX_Handle handle) {
     /* Get the pointer to the object */
     object = handle->object;
 
-    /* Disable preemption while checking if a transfer is in progress */
-    uint32_t key = HwiP_disable();
     if (!(object->streamStarted)) {
-        HwiP_restore(key);
-
         /* Stream is not in progress */
         return (false);
     }
-    HwiP_restore(key);
 
     /* Post event to synchronously shut down the stream. */
-    Event_post(pdmEvents, PDM_EVT_STOP);
-
-    /* Wait for PDM_EVT_STOP to take effect */
-    SemaphoreP_pend(&synchronisationSemaphore, SemaphoreP_WAIT_FOREVER);
+    Event_post(EventPostType_SYNC, PDM_EVT_STOP);
 
     return true;
 }
@@ -655,354 +731,364 @@ PROCESS_THREAD(PDMCC26XX_taskFxn, ev, data) {
 
         PROCESS_WAIT_EVENT();
 
+        if (ev == PROCESS_EVENT_POLL) {
 
-        if (ev == PDM_EVT_STOP) {
-
-            if (!PDMCC26XX_I2S_Contiki_stopStream(i2sHandle)) {
-                /* We failed to stop!! */
-                object->streamStarted = true;
-            }
-            else {
-                 /* Make sure to flag that a stream is no longer active */
-                object->streamStarted = false;
-
-                /* Allow system to enter standby again */
-                Power_releaseConstraint(PowerCC26XX_DISALLOW_STANDBY);
-
-                /* Unpower microphone */
-                PIN_setOutputValue(object->pinHandle, hwAttrs->micPower, (object->micPowerActiveHigh) ? 0 : 1);
-            }
-
-            SemaphoreP_post(&synchronisationSemaphore);
-        }
-
-        if (ev == PDM_EVT_CLOSE) {
-            /* Move unused ready elements to available queue */
-            while (!QueueP_empty(pcmMsgReadyQueue)) {
-                PDMCC26XX_queueNodePCM *readyNode = (PDMCC26XX_queueNodePCM *)QueueP_dequeue(pcmMsgReadyQueue);
-                /* Free up memory used for PCM data buffer */
-                object->freeFxn(readyNode->pBufferPCM, object->retBufSizeInBytes);
-                /* Then free up memory used by the queue element */
-                object->freeFxn(readyNode, sizeof(PDMCC26XX_queueNodePCM));
-            }
-            QueueP_destruct(&pcmMsgReady);
-
-            /*
-             * Deallocate the activePcmBuffer, close down the I2S driver, release the pins back to the PIN driver, and set the PDM driver to closed.
+            /* Atomically check for next event and continue to process all events in queue.
+             * POLL events from ISR are not queued - it simply sets a flag "needs to be polled".
              */
-            PDMCC26XX_rollbackDriverInitialisation(pdmHandle,
-                                                   (PDM_ROLLBACK_OPEN |
-                                                    PDM_ROLLBACK_DECIMATION_STATE |
-                                                    PDM_ROLLBACK_ACTIVE_PCM_BUFFER |
-                                                    PDM_ROLLBACK_I2S_DRIVER |
-                                                    PDM_ROLLBACK_PIN));
+            while ((lastPostedEvent = Event_get()) > 0) {
 
-            /* Cancel all other queued events. After closed is called, we don't want the driver to do anything else without being reopened. */
-            //events = 0;
+                numtaskFxnLoops++;
 
-            SemaphoreP_post(&synchronisationSemaphore);
-        }
+                if (lastPostedEvent == PDM_EVT_STOP) {
 
-        if (ev == PDM_EVT_START) {
-
-            pcmBufferFull = false;
-            byteCount = 0;
-            tempBufActive = false;
-            currTempBufIndex = 0;
-
-            /* Some microphones require a startup delay with clock applied. The
-             * throw counter is used for this.
-             */
-            if (object->applyCompression) {
-                /* If compression is enabled, the throwAwayCount is decremented
-                 * with respect to compressed data output. This number is the half
-                 * of the number of samples:
-                 */
-                throwAwayCount = PDMCC26XX_maxUInt32(PDM_DECIMATION_STARTUP_DELAY_IN_SAMPLES / 2, object->startupDelayWithClockInSamples / 2);
-            }
-            else {
-                /* If compression is disabled, the throwAwayCount is decremented
-                 * with respect to raw data, but in bytes not samples. Each sample
-                 * is two bytes and the throwAwayCount is operating
-                 * in bytes, this gives us:
-                 */
-                throwAwayCount = PDMCC26XX_maxUInt32(PDM_DECIMATION_STARTUP_DELAY_IN_SAMPLES * 2, object->startupDelayWithClockInSamples * 2);
-            }
-        }
-
-        if (ev == PDM_EVT_BLK_ERROR) {
-            /* Notify caller of error */
-            streamNotification.status = PDMCC26XX_STREAM_ERROR;
-            object->callbackFxn(pdmHandle, &streamNotification);
-            //events &= ~PDM_EVT_BLK_ERROR;
-        }
-
-        if (ev == PDM_EVT_I2S_DATA_DROPPED) {
-            uint32_t key = HwiP_disable();
-            /* The total number of PCM bytes that were dropped from the system. Includes those in the blocks dropped
-             * by the I2S module and those already in the PCM buffer
-             */
-            uint32_t pcmBytesDropped = byteCount + droppedPdmBlockCount * (object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE);
-            droppedPdmBlockCount = 0;
-
-            HwiP_restore(key);
-
-            /* Throw away enough PCM bytes to synchronise the PDM data stream with the PCMBuffer sequence number */
-            if (pcmBytesDropped != object->pcmBufferSizeInBytes) {
-                throwAwayCount += object->pcmBufferSizeInBytes - (pcmBytesDropped % object->pcmBufferSizeInBytes);
-            }
-            else {
-                throwAwayCount = 0;
-            }
-
-            /* Since we must drop the current PCM buffer, we are dropping at minimum 1. That is taken care of by dropping new samples though. If it has been long enough since we last processed PDM data, we may need to drop more buffers. */
-            metaDataForNextFrame.seqNum += pcmBytesDropped / object->pcmBufferSizeInBytes;
-
-            byteCount = 0;
-            tempBufActive = false;
-            currTempBufIndex = 0;
-        }
-
-        if (ev == PDM_EVT_BLK_RDY) {
-
-            /* Request PDM data from I2S driver */
-            while (PDMCC26XX_I2S_Contiki_requestBuffer(i2sHandle, &bufferRequest)) {
-                /* Buffer is available as long as it returns true */
-                if (throwAwayCount == 0) {
-                    /* Get new buffer from queue if active PCM buffer
-                     * is full.
-                     */
-                    if (pcmBufferFull) {
-                        /* PDMCC26XX_getNewPcmBuffer()
-                         * Get new container from available queue and allocate
-                         * memory for new buffer.
-                         */
-                        activePcmBuffer = PDMCC26XX_getNewPcmBuffer(pdmHandle);
-                        if (activePcmBuffer) {
-                            pcmBufferFull = false;
-                            byteCount = 0;
-                        }
-                        else {
-                            /* If we did not succeed getting a new pcm buffer, we
-                             * need to start throwing data.
-                             *
-                             * Update throwAwayCount
-                             * In this case throw bytes equal to the size of the
-                             * PCM buffer minus the data output size of one iteration
-                             * (which is dependent on compression/no compression).
-                             *
-                             * Note: Assuming that the (object->retBufSizeInBytes-PCM_METADATA_SIZE) is
-                             * larger than the data output of one iteration.
-                             */
-                            throwAwayCount = object->pcmBufferSizeInBytes - (object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE);
-                        }
-                    }
-                    /* Decimate PDM data to PCM, result is stored in tempPcmBuf */
-                    object->pdm2pcmFxn(bufferRequest.bufferIn,
-                                       object->decimationFilterState,
-                                       object->decimationFilter,
-                                       (int16_t *)&tempPcmBuf);
-
-                    /* Mark the temp buf as active */
-                    tempBufActive = true;
-                    /* Since the tempPcmBuffer might fill up the current pcm
-                     * buffer, we might have to perform the operation (compression
-                     * or memcpy) on the tempPcmBuffer in more than one iteration.
-                     *
-                     * If we did not allocate a new buffer succesfully above, we
-                     * are about to throw away data. In that case we should not
-                     * perform an operation on the PDM data.
-                     */
-                    while (tempBufActive && !pcmBufferFull) {
-                        int srcSize;
-
-                        /* Next step is to handle the data in the tempPcmBuffer
-                         *   - If compression is enabled, the compression function
-                         *     will read in data from tempPcmBuffer and output the
-                         *     compressed data to the dynamically allocated pcmBuffer.
-                         *   - If compression is disabled, we use memcpy to move the pcm
-                         *     data from the tempPcmBuffer to the dynamically allocated
-                         *     pcmBuffer.
-                         */
-                        if (object->applyCompression) {
-                           /* Prepare metadata.
-                            * This is done before the first compression into the
-                            * allocated PCM buffer.
-                            */
-                            if (byteCount == 0) {
-                                activePcmBuffer->pBufferPCM->metaData.si = metaDataForNextFrame.si;
-                                activePcmBuffer->pBufferPCM->metaData.pv = metaDataForNextFrame.pv;
-                            }
-                            /* If the current PCM buffer can fit the output of a
-                             * compression of what is left in tempPcmBuf, set srcSize
-                             * to that size. If not, set the srcSize to whatever will
-                             * fit and mark the current pcm buffer as full.
-                             *
-                             * Note: currTempBufIndex will always be multiple of 2.
-                             */
-                            if ((object->pcmBufferSizeInBytes - byteCount) > PDMCC26XX_COMPR_ITER_OUTPUT_SIZE - (currTempBufIndex / 2)) {
-                                /* srcSize set to whatever is left in the tempPcmBuffer. */
-                                srcSize = (PDMCC26XX_COMPR_ITER_OUTPUT_SIZE * 2) - currTempBufIndex;
-                            }
-                            else {
-                                /* This is the last compression into the current data buffer,
-                                 * mark it as full.
-                                 */
-                                pcmBufferFull = true;
-                                srcSize = ((object->retBufSizeInBytes-PCM_METADATA_SIZE) - byteCount) * 2;
-                            }
-
-                            /* Perform compression
-                             *
-                             * Since the source (tempPcmBuf) is operated as int16_t,
-                             * while the output as uint8_t srcSize is size in samples
-                             * (int16), it must be multiple of 2.
-                             */
-                            Codec1_encodeBuff((uint8_t *)&(activePcmBuffer->pBufferPCM->pBuffer[byteCount]),
-                                            (int16_t *)&(tempPcmBuf[currTempBufIndex]),
-                                            srcSize,
-                                            (int8_t *)&metaDataForNextFrame.si,
-                                            (int16_t *)&metaDataForNextFrame.pv);
-
-                            /* Update byteCount for next iteration.
-                             *
-                             * Since the compression is reducing the size with a factor 4,
-                             * and the pcm output buffer and the tempPcm buffer are of
-                             * different types, the byteCount will be incremented with
-                             * half the size of srcSize.
-                             */
-                            byteCount += srcSize / 2;
-
-                            /* Prepare currTempBufIndex for next iteration */
-                            currTempBufIndex += srcSize;
-                        }
-                        else {
-                            /* Compression is disabled */
-                            /* Compression will not be performed, so we copy data from
-                             * temporary pcm buffer to allocated memory. Uncompressed
-                             * PCM data buffer is 64 Bytes wide.
-                             *
-                             * Output and input are handled as bytes.
-                             */
-                            if ((object->pcmBufferSizeInBytes - byteCount) > (PDMCC26XX_CPY_ITER_OUTPUT_SIZE - (currTempBufIndex * 2))) {
-                                srcSize = PDMCC26XX_CPY_ITER_OUTPUT_SIZE - (currTempBufIndex * 2);
-                            }
-                            else {
-                                /* This is the last compression into the current data buffer,
-                                 * mark it as full.
-                                 */
-                                pcmBufferFull = true;
-                                srcSize = object->pcmBufferSizeInBytes - byteCount;
-                            }
-
-                            /* Copy PCM data from temp buffer to allocated memory */
-                            memcpy(&(activePcmBuffer->pBufferPCM->pBuffer[byteCount]),
-                                   &tempPcmBuf[currTempBufIndex],
-                                   srcSize);/* <- size in bytes */
-
-                           /* Prepare byteCount for next iteration, for memcpy the
-                            * byteCount is equal to the srcSize.
-                            */
-                            byteCount += srcSize;
-
-                            /* Prepare currTempBufIndex for next iteration.
-                             * Since the srcSize is byte aligned, but the tempBuffer
-                             * is sample (int16_t) aligned, divide srcSize with 2.
-                             */
-                            currTempBufIndex += srcSize / 2;
-                        }
-
-                        /* Is all the data in the tempPcmBuffer consumed?
-                         * If so, reset the index count and clear active flag.
-                         *
-                         */
-                        if (currTempBufIndex >= (sizeof(tempPcmBuf) / sizeof(tempPcmBuf[0]))) {
-                            tempBufActive = false;
-                            currTempBufIndex = 0;
-                        }
-
-                        if (pcmBufferFull) {
-                            /* If the allocated PCM buffer is full, we need to flag
-                             * that the PCM buffer is ready (and making the callback).
-                             *
-                             * And last, allocate a new PCM buffer to be used.
-                             */
-                            PDMCC26XX_setPcmBufferReady(pdmHandle, activePcmBuffer, (PDMCC26XX_I2S_BufferRequest *)&bufferRequest);
-
-                            /* Get new PCM buffer from available queue and allocate
-                             * memory for new buffer.
-                             */
-                            if ((activePcmBuffer = PDMCC26XX_getNewPcmBuffer(pdmHandle)) != NULL) {
-                                pcmBufferFull = false;
-                                byteCount = 0;
-                            }
-                            else {
-
-                                /* if we did not succeed getting a new pcm buffer,
-                                 * we need to start throwing data.
-                                 *
-                                 * Update ThrowCount
-                                 * In this case throw count is equal to data fitting
-                                 * in one allocated PCM buffer minus the output data
-                                 * which will be thrown in this iteration.
-                                 * Data thrown amount is data size of one iteration (which is dependent on
-                                 * compression/no compression), minus the data already
-                                 * consumed by the previous buffer.
-                                 */
-                                throwAwayCount = object->pcmBufferSizeInBytes - ((object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE) - currTempBufIndex);
-
-                                /* Mark the tempBuf as no longer active */
-                                tempBufActive = false;
-                            }
-                        }
-                    }
-                }
-                else {
-                    /* Still throwing away data */
-                    if (throwAwayCount <= (object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE)) {
-                        /* if the amount to be thrown away is less than or equal to
-                         * the output of one iteration of the data operation, the
-                         * count must be set to zero, the sequence number must be
-                         * incremented, and the index to be used by next data operation
-                         * must be updated correspondingly.
-                         */
-
-                        /* Note: Currently the startup delay will use the throwAwayCount
-                         * and that means the sequence number will be incremented
-                         * after the startup throwing has finished.
-                         */
-                        metaDataForNextFrame.seqNum++;
-                        /* tempPcmBuf is int16 array, but the throwAwayCount is
-                         * count in bytes.
-                         */
-                        if (object->applyCompression) {
-                            /* If compression is enabled, the throwAwayCount number
-                             * is the half of the number of samples:
-                             */
-                            currTempBufIndex = throwAwayCount * 2;
-                        }
-                        else {
-                            /* If compression is disabled, the throwAwayCount is decremented
-                             * with respect to raw data, but in bytes not samples. Since
-                             * the currTempBufIndex is sample oriented, we need to divide
-                             * that number with 2.
-                             */
-                            currTempBufIndex = (throwAwayCount + 1) / 2;
-                        }
-                        throwAwayCount = 0;
+                    if (!PDMCC26XX_I2S_Contiki_stopStream(i2sHandle)) {
+                        /* We failed to stop!! */
+                        object->streamStarted = true;
                     }
                     else {
-                        /* Decrement the throw counter with amount corresponding to
-                         * output data size of one iteration.
+                        /* Make sure to flag that a stream is no longer active */
+                        object->streamStarted = false;
+
+                        /* Allow system to enter standby again */
+                        Power_releaseConstraint(PowerCC26XX_DISALLOW_STANDBY);
+
+                        /* Unpower microphone */
+                        PIN_setOutputValue(object->pinHandle, hwAttrs->micPower, (object->micPowerActiveHigh) ? 0 : 1);
+                    }
+
+                    SemaphoreP_post(&synchronisationSemaphore);
+                }
+
+                if (lastPostedEvent == PDM_EVT_CLOSE) {
+                    /* Move unused ready elements to available queue */
+                    while (!QueueP_empty(pcmMsgReadyQueue)) {
+                        PDMCC26XX_queueNodePCM *readyNode = (PDMCC26XX_queueNodePCM *)QueueP_dequeue(pcmMsgReadyQueue);
+                        /* Free up memory used for PCM data buffer */
+                        object->freeFxn(readyNode->pBufferPCM, object->retBufSizeInBytes);
+                        /* Then free up memory used by the queue element */
+                        object->freeFxn(readyNode, sizeof(PDMCC26XX_queueNodePCM));
+                    }
+                    QueueP_destruct(&pcmMsgReady);
+
+                    /*
+                     * Deallocate the activePcmBuffer, close down the I2S driver, release the pins back to the PIN driver, and set the PDM driver to closed.
+                     */
+                    PDMCC26XX_rollbackDriverInitialisation(pdmHandle,
+                        (PDM_ROLLBACK_OPEN |
+                            PDM_ROLLBACK_DECIMATION_STATE |
+                            PDM_ROLLBACK_ACTIVE_PCM_BUFFER |
+                            PDM_ROLLBACK_I2S_DRIVER |
+                            PDM_ROLLBACK_PIN));
+
+                    /* Cancel all other queued events. After closed is called, we don't want the driver to do anything else without being reopened. */
+                    //events = 0;
+
+                    SemaphoreP_post(&synchronisationSemaphore);
+                }
+
+                if (lastPostedEvent == PDM_EVT_START) {
+
+                    pcmBufferFull = false;
+                    byteCount = 0;
+                    tempBufActive = false;
+                    currTempBufIndex = 0;
+
+                    /* Some microphones require a startup delay with clock applied. The
+                     * throw counter is used for this.
+                     */
+                    if (object->applyCompression) {
+                        /* If compression is enabled, the throwAwayCount is decremented
+                         * with respect to compressed data output. This number is the half
+                         * of the number of samples:
                          */
-                        throwAwayCount -= (object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE);
+                        throwAwayCount = PDMCC26XX_maxUInt32(PDM_DECIMATION_STARTUP_DELAY_IN_SAMPLES / 2, object->startupDelayWithClockInSamples / 2);
+                    }
+                    else {
+                        /* If compression is disabled, the throwAwayCount is decremented
+                         * with respect to raw data, but in bytes not samples. Each sample
+                         * is two bytes and the throwAwayCount is operating
+                         * in bytes, this gives us:
+                         */
+                        throwAwayCount = PDMCC26XX_maxUInt32(PDM_DECIMATION_STARTUP_DELAY_IN_SAMPLES * 2, object->startupDelayWithClockInSamples * 2);
                     }
                 }
-                /* Release PDM buffer */
-                bufferRelease.bufferHandleIn = bufferRequest.bufferHandleIn;
-                PDMCC26XX_I2S_Contiki_releaseBuffer(i2sHandle, &bufferRelease);
-            }
-        }
+
+                if (lastPostedEvent == PDM_EVT_BLK_ERROR) {
+                    /* Notify caller of error */
+                    streamNotification.status = PDMCC26XX_STREAM_ERROR;
+                    object->callbackFxn(pdmHandle, &streamNotification);
+                    //events &= ~PDM_EVT_BLK_ERROR;
+                }
+
+                if (lastPostedEvent == PDM_EVT_I2S_DATA_DROPPED) {
+                    /* The total number of PCM bytes that were dropped from the system. Includes those in the blocks dropped
+                     * by the I2S module and those already in the PCM buffer
+                     */
+                    uint32_t pcmBytesDropped = byteCount + droppedPdmBlockCount * (object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE);
+                    droppedPdmBlockCount = 0;
+
+                    /* Throw away enough PCM bytes to synchronise the PDM data stream with the PCMBuffer sequence number */
+                    if (pcmBytesDropped != object->pcmBufferSizeInBytes) {
+                        throwAwayCount += object->pcmBufferSizeInBytes - (pcmBytesDropped % object->pcmBufferSizeInBytes);
+                    }
+                    else {
+                        throwAwayCount = 0;
+                    }
+
+                    /* Since we must drop the current PCM buffer, we are dropping at minimum 1. That is taken care of by dropping new samples though. If it has been long enough since we last processed PDM data, we may need to drop more buffers. */
+                    metaDataForNextFrame.seqNum += pcmBytesDropped / object->pcmBufferSizeInBytes;
+
+                    byteCount = 0;
+                    tempBufActive = false;
+                    currTempBufIndex = 0;
+                }
+
+                if (lastPostedEvent == PDM_EVT_BLK_RDY) {
+
+                    /* Request PDM data from I2S driver */
+                    while (PDMCC26XX_I2S_Contiki_requestBuffer(i2sHandle, &bufferRequest)) {
+                        /* Buffer is available as long as it returns true */
+                        if (throwAwayCount == 0) {
+                            /* Get new buffer from queue if active PCM buffer
+                             * is full.
+                             */
+                            if (pcmBufferFull) {
+                                /* PDMCC26XX_getNewPcmBuffer()
+                                 * Get new container from available queue and allocate
+                                 * memory for new buffer.
+                                 */
+                                activePcmBuffer = PDMCC26XX_getNewPcmBuffer(pdmHandle);
+                                if (activePcmBuffer) {
+                                    pcmBufferFull = false;
+                                    byteCount = 0;
+                                }
+                                else {
+                                    /* If we did not succeed getting a new pcm buffer, we
+                                     * need to start throwing data.
+                                     *
+                                     * Update throwAwayCount
+                                     * In this case throw bytes equal to the size of the
+                                     * PCM buffer minus the data output size of one iteration
+                                     * (which is dependent on compression/no compression).
+                                     *
+                                     * Note: Assuming that the (object->retBufSizeInBytes-PCM_METADATA_SIZE) is
+                                     * larger than the data output of one iteration.
+                                     */
+                                    throwAwayCount = object->pcmBufferSizeInBytes - (object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE);
+                                }
+                            }
+                            /* Decimate PDM data to PCM, result is stored in tempPcmBuf */
+#if 1 /* Causing hard fault with TI's assembly.  Needs fixing!! */
+                            object->pdm2pcmFxn(bufferRequest.bufferIn,
+                                object->decimationFilterState,
+                                object->decimationFilter,
+                                (int16_t *)&tempPcmBuf);
+#endif
+                            /* Mark the temp buf as active */
+                            tempBufActive = true;
+                            /* Since the tempPcmBuffer might fill up the current pcm
+                             * buffer, we might have to perform the operation (compression
+                             * or memcpy) on the tempPcmBuffer in more than one iteration.
+                             *
+                             * If we did not allocate a new buffer succesfully above, we
+                             * are about to throw away data. In that case we should not
+                             * perform an operation on the PDM data.
+                             */
+                            while (tempBufActive && !pcmBufferFull) {
+                                int srcSize;
+
+                                /* Next step is to handle the data in the tempPcmBuffer
+                                 *   - If compression is enabled, the compression function
+                                 *     will read in data from tempPcmBuffer and output the
+                                 *     compressed data to the dynamically allocated pcmBuffer.
+                                 *   - If compression is disabled, we use memcpy to move the pcm
+                                 *     data from the tempPcmBuffer to the dynamically allocated
+                                 *     pcmBuffer.
+                                 */
+                                if (object->applyCompression) {
+                                    /* Prepare metadata.
+                                     * This is done before the first compression into the
+                                     * allocated PCM buffer.
+                                     */
+                                    if (byteCount == 0) {
+                                        activePcmBuffer->pBufferPCM->metaData.si = metaDataForNextFrame.si;
+                                        activePcmBuffer->pBufferPCM->metaData.pv = metaDataForNextFrame.pv;
+                                    }
+                                    /* If the current PCM buffer can fit the output of a
+                                     * compression of what is left in tempPcmBuf, set srcSize
+                                     * to that size. If not, set the srcSize to whatever will
+                                     * fit and mark the current pcm buffer as full.
+                                     *
+                                     * Note: currTempBufIndex will always be multiple of 2.
+                                     */
+                                    if ((object->pcmBufferSizeInBytes - byteCount) > PDMCC26XX_COMPR_ITER_OUTPUT_SIZE - (currTempBufIndex / 2)) {
+                                        /* srcSize set to whatever is left in the tempPcmBuffer. */
+                                        srcSize = (PDMCC26XX_COMPR_ITER_OUTPUT_SIZE * 2) - currTempBufIndex;
+                                    }
+                                    else {
+                                        /* This is the last compression into the current data buffer,
+                                         * mark it as full.
+                                         */
+                                        pcmBufferFull = true;
+                                        srcSize = ((object->retBufSizeInBytes - PCM_METADATA_SIZE) - byteCount) * 2;
+                                    }
+
+                                    /* Perform compression
+                                     *
+                                     * Since the source (tempPcmBuf) is operated as int16_t,
+                                     * while the output as uint8_t srcSize is size in samples
+                                     * (int16), it must be multiple of 2.
+                                     */
+                                    Codec1_encodeBuff((uint8_t *)&(activePcmBuffer->pBufferPCM->pBuffer[byteCount]),
+                                        (int16_t *)&(tempPcmBuf[currTempBufIndex]),
+                                        srcSize,
+                                        (int8_t *)&metaDataForNextFrame.si,
+                                        (int16_t *)&metaDataForNextFrame.pv);
+
+                                    /* Update byteCount for next iteration.
+                                     *
+                                     * Since the compression is reducing the size with a factor 4,
+                                     * and the pcm output buffer and the tempPcm buffer are of
+                                     * different types, the byteCount will be incremented with
+                                     * half the size of srcSize.
+                                     */
+                                    byteCount += srcSize / 2;
+
+                                    /* Prepare currTempBufIndex for next iteration */
+                                    currTempBufIndex += srcSize;
+                                }
+                                else {
+                                    /* Compression is disabled */
+                                    /* Compression will not be performed, so we copy data from
+                                     * temporary pcm buffer to allocated memory. Uncompressed
+                                     * PCM data buffer is 64 Bytes wide.
+                                     *
+                                     * Output and input are handled as bytes.
+                                     */
+                                    if ((object->pcmBufferSizeInBytes - byteCount) > (PDMCC26XX_CPY_ITER_OUTPUT_SIZE - (currTempBufIndex * 2))) {
+                                        srcSize = PDMCC26XX_CPY_ITER_OUTPUT_SIZE - (currTempBufIndex * 2);
+                                    }
+                                    else {
+                                        /* This is the last compression into the current data buffer,
+                                         * mark it as full.
+                                         */
+                                        pcmBufferFull = true;
+                                        srcSize = object->pcmBufferSizeInBytes - byteCount;
+                                    }
+
+                                    /* Copy PCM data from temp buffer to allocated memory */
+                                    memcpy(&(activePcmBuffer->pBufferPCM->pBuffer[byteCount]),
+                                        &tempPcmBuf[currTempBufIndex],
+                                        srcSize);/* <- size in bytes */
+
+                                /* Prepare byteCount for next iteration, for memcpy the
+                                 * byteCount is equal to the srcSize.
+                                 */
+                                    byteCount += srcSize;
+
+                                    /* Prepare currTempBufIndex for next iteration.
+                                     * Since the srcSize is byte aligned, but the tempBuffer
+                                     * is sample (int16_t) aligned, divide srcSize with 2.
+                                     */
+                                    currTempBufIndex += srcSize / 2;
+                                }
+
+                                /* Is all the data in the tempPcmBuffer consumed?
+                                 * If so, reset the index count and clear active flag.
+                                 *
+                                 */
+                                if (currTempBufIndex >= (sizeof(tempPcmBuf) / sizeof(tempPcmBuf[0]))) {
+                                    tempBufActive = false;
+                                    currTempBufIndex = 0;
+                                }
+
+                                if (pcmBufferFull) {
+                                    /* If the allocated PCM buffer is full, we need to flag
+                                     * that the PCM buffer is ready (and making the callback).
+                                     *
+                                     * And last, allocate a new PCM buffer to be used.
+                                     */
+                                    PDMCC26XX_setPcmBufferReady(pdmHandle, activePcmBuffer, (PDMCC26XX_I2S_BufferRequest *)&bufferRequest);
+
+                                    /* Get new PCM buffer from available queue and allocate
+                                     * memory for new buffer.
+                                     */
+                                    if ((activePcmBuffer = PDMCC26XX_getNewPcmBuffer(pdmHandle)) != NULL) {
+                                        pcmBufferFull = false;
+                                        byteCount = 0;
+                                    }
+                                    else {
+
+                                        /* if we did not succeed getting a new pcm buffer,
+                                         * we need to start throwing data.
+                                         *
+                                         * Update ThrowCount
+                                         * In this case throw count is equal to data fitting
+                                         * in one allocated PCM buffer minus the output data
+                                         * which will be thrown in this iteration.
+                                         * Data thrown amount is data size of one iteration (which is dependent on
+                                         * compression/no compression), minus the data already
+                                         * consumed by the previous buffer.
+                                         */
+                                        throwAwayCount = object->pcmBufferSizeInBytes - ((object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE) - currTempBufIndex);
+
+                                        /* Mark the tempBuf as no longer active */
+                                        tempBufActive = false;
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            /* Still throwing away data */
+                            if (throwAwayCount <= (object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE)) {
+                                /* if the amount to be thrown away is less than or equal to
+                                 * the output of one iteration of the data operation, the
+                                 * count must be set to zero, the sequence number must be
+                                 * incremented, and the index to be used by next data operation
+                                 * must be updated correspondingly.
+                                 */
+
+                                 /* Note: Currently the startup delay will use the throwAwayCount
+                                  * and that means the sequence number will be incremented
+                                  * after the startup throwing has finished.
+                                  */
+                                metaDataForNextFrame.seqNum++;
+                                /* tempPcmBuf is int16 array, but the throwAwayCount is
+                                 * count in bytes.
+                                 */
+                                if (object->applyCompression) {
+                                    /* If compression is enabled, the throwAwayCount number
+                                     * is the half of the number of samples:
+                                     */
+                                    currTempBufIndex = throwAwayCount * 2;
+                                }
+                                else {
+                                    /* If compression is disabled, the throwAwayCount is decremented
+                                     * with respect to raw data, but in bytes not samples. Since
+                                     * the currTempBufIndex is sample oriented, we need to divide
+                                     * that number with 2.
+                                     */
+                                    currTempBufIndex = (throwAwayCount + 1) / 2;
+                                }
+                                throwAwayCount = 0;
+                            }
+                            else {
+                                /* Decrement the throw counter with amount corresponding to
+                                 * output data size of one iteration.
+                                 */
+                                throwAwayCount -= (object->applyCompression ? PDMCC26XX_COMPR_ITER_OUTPUT_SIZE : PDMCC26XX_CPY_ITER_OUTPUT_SIZE);
+                            }
+                        }
+                        /* Release PDM buffer */
+                        bufferRelease.bufferHandleIn = bufferRequest.bufferHandleIn;
+                        PDMCC26XX_I2S_Contiki_releaseBuffer(i2sHandle, &bufferRelease);
+                    }
+                }  /* lastPostedEvent */
+
+            } /* while Event_get() != 0 */
+
+        } /* ev == PROCESS_EVENT_POLL */
     }
 
     PROCESS_END();
@@ -1042,6 +1128,8 @@ bool PDMCC26XX_Contiki_requestBuffer(PDMCC26XX_Handle handle, PDMCC26XX_BufferRe
 static void PDMCC26XX_i2sCallbackFxn(PDMCC26XX_I2S_Handle handle, PDMCC26XX_I2S_StreamNotification *notification) {
     uint32_t event = 0;
 
+    i2sCallbackFxnCalls++;
+
     switch (notification->status) {
         case PDMCC26XX_I2S_STREAM_BUFFER_READY:
             event = PDM_EVT_BLK_RDY;
@@ -1060,7 +1148,9 @@ static void PDMCC26XX_i2sCallbackFxn(PDMCC26XX_I2S_Handle handle, PDMCC26XX_I2S_
             break;
     }
 
-    Event_post(pdmEvents, event);
+    if (event != 0) {
+        Event_post(EventPostType_POLL, event);
+    }
 
 }
 
@@ -1158,6 +1248,9 @@ static PDMCC26XX_queueNodePCM * PDMCC26XX_getNewPcmBuffer(PDMCC26XX_Handle handl
         buf->pBufferPCM = object->mallocFxn(object->retBufSizeInBytes);
         /* If new memory was allocated correctly, return pointer. */
         if (buf->pBufferPCM != NULL) {
+
+            getNewPcmBufferSuccess++;
+
             return buf;
         }
         else {
@@ -1168,6 +1261,7 @@ static PDMCC26XX_queueNodePCM * PDMCC26XX_getNewPcmBuffer(PDMCC26XX_Handle handl
         }
     }
 
+    getNewPcmBufferFail++;
     return NULL;
 }
 
@@ -1178,7 +1272,6 @@ static PDMCC26XX_queueNodePCM * PDMCC26XX_getNewPcmBuffer(PDMCC26XX_Handle handl
  * Only those parts of the driver that can fail when calling PDMCC26XX_open can be included as entries in the rollbackVector.
  */
 static void PDMCC26XX_rollbackDriverInitialisation(PDMCC26XX_Handle handle, uint32_t rollbackVector){
-    unsigned int            key;
     PDMCC26XX_Object        *object;
 
     Assert_isTrue(handle, NULL);
@@ -1220,9 +1313,7 @@ static void PDMCC26XX_rollbackDriverInitialisation(PDMCC26XX_Handle handle, uint
 
     if (rollbackVector & PDM_ROLLBACK_OPEN) {
         /* Mark the module as available */
-        key = HwiP_disable();
         object->isOpen = false;
-        HwiP_restore(key);
     }
 }
 

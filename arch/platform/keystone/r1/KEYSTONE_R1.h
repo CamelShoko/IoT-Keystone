@@ -131,6 +131,9 @@ extern I2C_Handle hI2cSensor;
 #define KEYSTONE_R1_I2C0_SCL0             IOID_29
 #define KEYSTONE_R1_I2C0_SDA0             IOID_30
 
+/* I2S */
+#define KEYSTONE_R1_I2S0_CLK              IOID_3
+#define KEYSTONE_R1_I2S0_DOUT             IOID_4
 
 /* LEDs */
 #define KEYSTONE_R1_PIN_LED_ON            1

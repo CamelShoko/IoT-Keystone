@@ -334,6 +334,9 @@ distclean:
 
 -include $(CONTIKI)/arch/platform/$(TARGET)/Makefile.customrules-$(TARGET)
 
+AS := $(CC)
+ASFLAGS := $(CFLAGS)
+
 ifndef CUSTOM_RULE_C_TO_OBJECTDIR_O
 $(OBJECTDIR)/%.o: %.c | $(OBJECTDIR)
 	$(TRACE_CC)
@@ -344,10 +347,10 @@ endif
 ifndef CUSTOM_RULE_S_TO_OBJECTDIR_O
 $(OBJECTDIR)/%.o: %.S | $(OBJECTDIR)
 	$(TRACE_AS)
-	$(Q)$(AS) $(ASFLAGS) -o $@ $<
+	$(Q)$(AS) $(ASFLAGS) -o $@ -c $<
 $(OBJECTDIR)/%.o: %.s | $(OBJECTDIR)
 	$(TRACE_AS)
-	$(Q)$(AS) $(ASFLAGS) -o $@ $<
+	$(Q)$(AS) $(ASFLAGS) -o $@ -c $<
 endif
 
 ifndef CUSTOM_RULE_C_TO_OBJECTDIR_S
@@ -364,6 +367,12 @@ endif
 
 ifndef CUSTOM_RULE_C_TO_O
 %.o: %.c
+	$(TRACE_CC)
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+endif
+
+ifndef CUSTOM_RULE_S_TO_O
+%.o: %.S
 	$(TRACE_CC)
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 endif

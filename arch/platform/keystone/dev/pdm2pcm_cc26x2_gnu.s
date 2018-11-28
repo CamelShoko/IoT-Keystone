@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018, Texas Instruments Incorporated
+ * Copyright (c) 2018, This. Is. IoT. - https://thisisiot.io
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,6 +34,11 @@
 /*
  *  ======== pdm2pcm_cc26x2.sm4fg ========
  *  This file assumes GCC Assembly Language Syntax.
+ *
+ *  This.Is.IoT. fixes:
+ *    .text sections using ":" instead of "."
+ *    loading of LUT into LR register performed incorrectly causing
+ *       hard fault.
  */
 
 /* Determine whether input bitstream has big endian byte order (natural) or
@@ -173,7 +179,9 @@ pdm2pcm16k:
 
     MOV     R11, R0                     /* R11: pOut is copy of pIn [perform in place] */
     MOV     R12, #32*2                  /* R12: nOutSamples */
-    LDR     R14, cicOrd4Bits8Pad0LutLoc16
+
+    /* Keystone Fixed: hard fault. */
+    LDR R14, =cicOrd4Bits8Pad0Lut
 
     /* Get accumulator/differentiator state */
     LDM     R1, {R4-R6, R8-R10}
@@ -279,12 +287,7 @@ p2p16k_cic_EXIT:
     B       p2pBiQuad
     .endfunc
 
-/* LTORG compiler directive does not exist for the TI compiler.
- * The TI compiler places the immediates below in the flash addresses
- * following the code by default, since they are in the same section.
- */
-cicOrd4Bits8Pad0LutLoc16:
-    .word cicOrd4Bits8Pad0Lut
+
 
     .syntax unified
     .thumb
@@ -416,7 +419,9 @@ pdm2pcm8k:
 
     MOV     R11, R0                     /* R11: pOut is copy of pIn [perform in place] */
     MOV     R12, #32*2                  /* R12: nOutSamples */
-    LDR     R14, cicOrd4Bits8Pad0LutLoc8
+    
+    /* Keystone Fixed: hard fault. */
+    LDR R14, =cicOrd4Bits8Pad0Lut
 
     /* Get accumulator/differentiator state */
     LDM     R1, {R4-R6, R8-R10}
@@ -519,14 +524,8 @@ p2p8k_cic_EXIT:
     B       p2pBiQuad
     .endfunc
 
-/* LTORG compiler directive does not exist for the TI compiler.
- * The TI compiler places the immediates below in the flash addresses
- * following the code by default, since they are in the same section.
- */
-cicOrd4Bits8Pad0LutLoc8:
-    .word cicOrd4Bits8Pad0Lut
 
-    .sect ".text:pdm2pcm_2nd_stage"
+    .sect ".text.pdm2pcm_2nd_stage"
     .thumb_func
     /* ### SECOND STAGE (@Fsout*2) ###
      * **** A N-stage (typically 5) biquad IIR filter that is used to ****
@@ -725,7 +724,7 @@ p2pfs_RETURN:
     .endfunc
 
 
-    .sect ".text:pdm2pcm_lut"
+    .sect ".text.pdm2pcm_lut"
 
 /* LUT for order 4 CIC decimator. The LUT index corresponds to 8 bits of
  * input, MSB to LSB (followed by 0 zero bits). Each LUT entry contains a

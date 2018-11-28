@@ -948,9 +948,9 @@ const PDMCC26XX_I2S_HWAttrs i2sCC26xxHWAttrs[KEYSTONE_R1_I2SCOUNT] = {
         .intNum = INT_I2S_IRQ,
         .intPriority = ~0,
         .mclkPin = PIN_UNASSIGNED,
-        .bclkPin = PIN_UNASSIGNED,
+        .bclkPin = KEYSTONE_R1_I2S0_CLK,
         .wclkPin = PIN_UNASSIGNED,
-        .ad0Pin = PIN_UNASSIGNED,
+        .ad0Pin = KEYSTONE_R1_I2S0_DOUT,
     },
 };
 
