@@ -134,6 +134,7 @@ extern I2C_Handle hI2cSensor;
 /* I2S */
 #define KEYSTONE_R1_I2S0_CLK              IOID_3
 #define KEYSTONE_R1_I2S0_DOUT             IOID_4
+#define BOARD_AUDIO_SENSOR_SENSITIVITY_DB -26  /* MP34DT05 */
 
 /* LEDs */
 #define KEYSTONE_R1_PIN_LED_ON            1

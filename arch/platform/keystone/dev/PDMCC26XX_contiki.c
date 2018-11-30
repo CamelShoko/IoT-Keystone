@@ -65,7 +65,7 @@
 
 
 /*---------------------------------------------------------------------------*/
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #else
@@ -478,6 +478,8 @@ PDMCC26XX_Handle PDMCC26XX_Contiki_open(PDMCC26XX_Params *params) {
     object->pcmBufferSizeInBytes            = params->retBufSizeInBytes - PCM_METADATA_SIZE;
     object->decimationFilter                = params->decimationFilter ? params->decimationFilter : PDMCC26XX_aBqCoeffs;
     gainCoefficient                         = params->defaultFilterGain;
+
+    PRINTF("PDMCC26XX_open rate=%d bufsize=%d\n", params->pcmSampleRate, params->retBufSizeInBytes);
 
     object->decimationFilterStateSize       = params->decimationFilterStateSize;
     object->decimationFilterState           = object->mallocFxn(params->decimationFilterStateSize);

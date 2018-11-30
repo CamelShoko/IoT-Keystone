@@ -77,6 +77,8 @@
 #define AUDIO_SENSOR_NO_BUFFER      -2 /* no buffer available to value() or get_buffer() */
 #define AUDIO_SENSOR_GET_BUFFER     1
 #define AUDIO_SENSOR_PUT_BUFFER     2
+
+#define AUDIO_SENSOR_SENSIVITY_DB   BOARD_AUDIO_SENSOR_SENSITIVITY_DB
 /*---------------------------------------------------------------------------*/
 /* Module configuration */
 
@@ -86,6 +88,19 @@
 #define AUDIO_SENSOR_RET_BUF_SIZE       AUDIO_SENSOR_CONF_RET_BUF_SIZE
 #else
 #define AUDIO_SENSOR_RET_BUF_SIZE       64  /* minimum of 64 */
+#endif
+
+
+
+/* Resultant PCM audio sample rate in kHz */
+/* Supports only 8 or 16.
+ * Note, workaround may be employed to double microphone bit clock and use 8 KHz sample rate
+ * to achieve 16 KHz-like decimation 
+ */
+#ifdef AUDIO_SENSOR_CONF_SAMP_RATE_KHZ
+#define AUDIO_SENSOR_SAMP_RATE_KHZ       AUDIO_SENSOR_CONF_SAMP_RATE_KHZ
+#else
+#define AUDIO_SENSOR_SAMP_RATE_KHZ       16 
 #endif
 
 /* Size of the array of PCM data bytes within the returned buffer is

@@ -76,7 +76,7 @@
 
 
  /*---------------------------------------------------------------------------*/
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -187,13 +187,38 @@ PDMCC26XX_I2S_Handle PDMCC26XX_I2S_Contiki_open(PDMCC26XX_I2S_Handle handle, PDM
     object->currentStream->status       = PDMCC26XX_I2S_STREAM_IDLE;
 
     /* The following are constants that apply to PDM */
+    /* Notes:
+     *   Master clock (MCLK) is not used by I2S hardware, so ignore.
+     *   Bit clock (BCLK) drives the microphone bit sample clock and is the primary clock.
+     *   Word clock (WCLK) controls how to group sampled microphone bits into a "word".
+     *   
+     *   BCLK controls the sample rate, and must be within the normal operating frequency of the microphone.
+     *   WCLK is 16 because the driver works with 16-bit groupings.
+     *   !Changing BCLK has consequence on the downsample filter in pdm2pcm_cc26x2_gnu.s, as it was designed
+     *   to obtain 16 kHz, 16-bit PCM from a 1 MHz BCLK (good for sampling 8 kHz voice).
+     *
+     *   WCLK phase is "dual" to co-incide with the 2-channel (STEREO) setup.  All this means is that
+     *   the microphone is sampled continuously and samples of the two channels are contiguously
+     *   placed into the buffers (at least, that is the design intent here).  The microphone data is
+     *   sampled on the rising edge of BCLK only (microphone is setup in Left channel mode).
+     *
+     *   The default parameters for the 1 MHz sample were:
+     *         object->audioClkCfg.bclkDiv = 47;                                        
+     *
+     *   To work with MP34DT05, we need BCLK to be at least 1.2 MHz and no more than about 3.25 MHz.
+     *   All I can do here, without understanding the decimation filter design enough to modify it,
+     *   is to:
+     *      1. Increase BCLK to 1.2 MHz
+     *      2. Hope this doesn't affect the decimation filter too much.
+     *
+    */
     object->sampleRate = -1;                                                  /* If negative then use user configured clock division */
     object->audioClkCfg.wclkDiv = 16;                                            /* I2S Word Clock divider override*/
     object->audioClkCfg.sampleOnPositiveEdge = PDMCC26XX_I2S_SampleEdge_Postive; /* I2S Sample Edge */
     object->audioClkCfg.wclkPhase = PDMCC26XX_I2S_WordClockPhase_Dual;           /* I2S Word Clock Phase */
     object->audioClkCfg.wclkInverted = PDMCC26XX_I2S_ClockSource_Normal;         /* I2S Invert Word Clock */
     object->audioClkCfg.wclkSource = PDMCC26XX_I2S_WordClockSource_Int;          /* I2S Word Clock source */
-    object->audioClkCfg.bclkDiv = 47;                                            /* I2S Bit Clock divider override */
+    object->audioClkCfg.bclkDiv = 40;                                            /* I2S Bit Clock divider override for 1.2 MHz mic clock */
     object->audioClkCfg.reserved = 0;
     object->audioClkCfg.bclkSource = PDMCC26XX_I2S_BitClockSource_Int;           /* I2S Bit Clock source */
     object->audioClkCfg.mclkDiv = 6;                                             /* I2S Master Clock divider override */

@@ -126,9 +126,14 @@ sensor_init(void)
   pdmParams.freeFxn = &free_fxn;
   pdmParams.pdmBufferQueueDepth = 6; /* default is 3, but we need more to handle potential application latency */
   
-#if 0
-  /* Configure the params to use 8kHz PCM output (4 ms buffer period instead of 2 ms) */
-  pdmParams.pcmSampleRate = PDMCC26XX_PCM_SAMPLE_RATE_8K;
+#if 1
+
+  /* Configure the params to use 8kHz PCM output (4 ms buffer period instead of 2 ms) 
+   * to compensate for the doubling of the microphone bit clock (BCLK).  See PDMCC26XX_I2S_Contiki_open() for
+   * a discussion on why this is done (in summary, it allows MP34DT05 to work with 2 MHz clock).
+  */
+
+  pdmParams.pcmSampleRate = (AUDIO_SENSOR_SAMP_RATE_KHZ == 16) ? PDMCC26XX_PCM_SAMPLE_RATE_16K : PDMCC26XX_PCM_SAMPLE_RATE_8K;
 #else
   /* Configure the params to use 16kHz PCM output (2 ms buffer period)  
    * We do this because the microphone sample clock needs to be high enough
