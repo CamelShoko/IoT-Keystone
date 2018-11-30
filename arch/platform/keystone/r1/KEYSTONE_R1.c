@@ -561,14 +561,20 @@ const uint_least8_t NVS_count = KEYSTONE_R1_NVSCOUNT;
  * 
  * It is also possible that drivers will access the pins directly without access control
  * using the PINCC26XX_setOutputValue() API.
+ *
+ * The Contiki GPIO HAL does not configure pin drive, so that must be setup here.  
+ * This allows use of open drain mode for the LED IO.
 */
 
 const PIN_Config BoardGpioInitTable[] = {
 
-#if 0 /* LED initialized through GPIO hal. Leave them tri-state at startup (off). */
+#if 1 /* LED initialized through GPIO hal, but the IOMODE can be specified at init time here (it is not overwritten by PIN_open()).
+       * These must be set to OPEN DRAIN because the MCU operates in a 1.8V domain while
+       * the LEDs are powered from VBAT, so LOW sinks current (turns them on), while HIGH is HI-Z (turns them off).
+       */
     /* LED */
-    KEYSTONE_R1_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
-    KEYSTONE_R1_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,          /* LED initially off */
+    KEYSTONE_R1_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_OPENDRAIN | PIN_DRVSTR_MAX,          /* LED initially off */
+    KEYSTONE_R1_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_OPENDRAIN | PIN_DRVSTR_MAX,          /* LED initially off */
 #endif
 
 #if 0
