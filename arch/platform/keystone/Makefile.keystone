@@ -1,0 +1,89 @@
+################################################################################
+### Keystone platform makefile
+
+################################################################################
+### Sanity check of expected symbols
+
+ifndef CONTIKI
+ $(error 'CONTIKI' not defined! You must specify where CONTIKI resides!)
+endif
+
+ifndef BOARD
+ $(error 'BOARD' not defined! You must specify which board you are using!)
+endif
+
+FAMILY_PATH := $(realpath $(CONTIKI)/arch/platform/keystone)
+CLEAN += *.keystone
+
+################################################################################
+### SimpleLink MCU platform makefile
+
+################################################################################
+# Directory and source configurations
+
+# Include the board-specific Makefile
+BOARD_PATH := $(FAMILY_PATH)/$(BOARD)
+include $(BOARD_PATH)/Makefile.$(notdir $(BOARD))
+
+DEVICE_FAMILY_LC := $(shell echo "$(DEVICE_FAMILY)" | tr A-Z a-z)
+
+# Add to the source dirs
+TARGET_FAMILY_DIRS += dev
+TARGET_FAMILY_DIRS += lora
+TARGET_FAMILY_DIRS += $(BOARD)
+
+CONTIKI_TARGET_DIRS += $(TARGET_FAMILY_DIRS)
+
+BOARD_DEFINES += DeviceFamily_$(DEVICE_FAMILY)
+BOARD_DEFINES += DEVICE_LINE_$(DEVICE_LINE)
+BOARD_DEFINES += DEVICE_$(DEVICE)
+BOARD_DEFINES += $(BOARD_TYPE)
+BOARD_DEFINES += SUPPORTS_PROP_MODE=$(SUPPORTS_PROP_MODE)
+BOARD_DEFINES += SUPPORTS_IEEE_MODE=$(SUPPORTS_IEEE_MODE)
+BOARD_DEFINES += SUPPORTS_BLE_BEACON=$(SUPPORTS_BLE_BEACON)
+BOARD_DEFINES += SUPPORTS_HIGH_PA=$(SUPPORTS_HIGH_PA)
+
+# If the user-specified a Node ID, pass a define
+ifdef NODEID
+  BOARD_DEFINES += IEEE_ADDR_NODE_ID=$(NODEID)
+endif
+
+CFLAGS += $(addprefix -D, $(BOARD_DEFINES))
+
+# Setup the heap to something useful.  The audio sensor streaming driver
+# utilizes the heap.
+LDFLAGS += -Wl,--defsym=HEAPSIZE=0x1000
+
+CONTIKI_TARGET_SOURCEFILES += platform.c
+CONTIKI_TARGET_SOURCEFILES += batmon-sensor.c
+CONTIKI_TARGET_SOURCEFILES += $(BOARD_SOURCEFILES)
+
+# Build the sensor drivers
+CONTIKI_TARGET_SOURCEFILES += bme280-arch.c
+CONTIKI_TARGET_SOURCEFILES += opt-3001-sensor.c
+CONTIKI_TARGET_SOURCEFILES += audio-sensor.c
+CONTIKI_TARGET_SOURCEFILES += PDMCC26XX_contiki.c
+CONTIKI_TARGET_SOURCEFILES += PDMCC26XX_util_contiki.c
+CONTIKI_TARGET_SOURCEFILES += pdm2pcm_cc26x2_gnu.s
+
+
+# Build the lora driver
+CONTIKI_TARGET_SOURCEFILES += lora-radio.c sx126x.c lora-delay.c lora-timer.c 
+CONTIKI_TARGET_SOURCEFILES += sx1262-board.c lora-systime.c lora-utilities.c
+
+CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
+
+# Pull in the correct CPU makefile
+CPU_FAMILY = cc13xx-cc26xx
+
+# Define the CPU directory and pull in the correct CPU Makefile
+CONTIKI_CPU := $(realpath $(CONTIKI)/arch/cpu/simplelink-$(CPU_FAMILY))
+include $(CONTIKI_CPU)/Makefile.$(CPU_FAMILY)
+
+MODULES += os/net os/net/mac os/net/mac/framer
+
+################################################################################
+# Display all supported keystone Boards
+keystone_boards:
+	@echo "$(BOARDS) (current: $(BOARD))"
+
