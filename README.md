@@ -1,11 +1,11 @@
-# IoT.Keystone: The Easiest and Most Secure Way to Move Sensor Data to the Cloud.
+# IoT.Keystone: The Easiest Lowest Power and Most Secure Way to Move Sensor Data to the Cloud.
 
 [![Build Status](https://travis-ci.org/contiki-ng/contiki-ng.svg?branch=master)](https://travis-ci.org/thisisiot/iot-keystone/branches)
 [![license](https://img.shields.io/badge/license-3--clause%20bsd-brightgreen.svg)](https://github.com/thisisiot/iot-keystone/blob/master/LICENSE.md)
 [![Last commit](https://img.shields.io/github/last-commit/contiki-ng/contiki-ng.svg)](https://github.com/thisisiot/iot-keystone/commit/HEAD)
 
 
-THIS.IS.IoT.Keystone is a simple-to-use yet powerful and secure IoT sensor device communication platform. It is designed to run on the THIS.IS.IoT.Keystone hardware boards and modules aimed at building secure "sensor to cloud" IoT solutions.  The THIS.IS.IoT.Keystone firmware and hardware platform uniquely utilizes the long-range Smart City and Industrial IoT appropriate sub-GHz band by making available both 6LoWPAN mesh-style and LoRaWAN network capability to the same application.  THIS.IS.IoT.Keystone is built on *open* and *standardized* communication and security protocols that will power the next phase of global interoperable IoT.
+THIS.IS.IoT.Keystone is a simple-to-use yet powerful, secure, reliable and low-power IoT sensor device communication platform. It is designed to run on the THIS.IS.IoT.Keystone hardware boards and modules aimed at building secure "sensor to cloud" IoT solutions.  The THIS.IS.IoT.Keystone firmware and hardware platform uniquely utilizes the long-range Smart City and Industrial IoT appropriate sub-GHz band by making available both 6LoWPAN mesh-style and LoRaWAN network capability to the same application.  THIS.IS.IoT.Keystone is built on *open* and *standardized* communication and security protocols that will power the next phase of global interoperable IoT.
 
 ## IoT.Keystone Platform Firmware Features
 
