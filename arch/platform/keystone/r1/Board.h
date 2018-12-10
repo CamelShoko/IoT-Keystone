@@ -87,7 +87,9 @@ extern "C" {
 #define Board_PIN_LORA_RST      KEYSTONE_R1_PIN_LORA_RST
 #define Board_PIN_LORA_BUSY     KEYSTONE_R1_PIN_LORA_BUSY
 #define Board_PIN_FLASH_EN      KEYSTONE_R1_PIN_FLASH_EN
-#define Board_PIN_HAL           KEYSTONE_R1_PIN_HALL
+#define Board_PIN_HALL          KEYSTONE_R1_PIN_HALL
+
+#define Board_PIN_IMU_INT       KEYSTONE_R1_PIN_IMU_INT
 
 #define Board_GPTIMER0A         KEYSTONE_R1_GPTIMER0A
 #define Board_GPTIMER0B         KEYSTONE_R1_GPTIMER0B

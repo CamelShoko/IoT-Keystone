@@ -110,8 +110,10 @@ I2C_Handle hI2cSensor;
  *     detect failures there.
  *   - Value function triggers full readout but only returns one value.
  * Use its bme280.h API directly.
+ *
+ * Motion sensor init is done by application to catch init failures.
  */
-SENSORS(/* &bme280_sensor, */ &opt_3001_sensor, &audio_sensor);
+SENSORS(/* &bme280_sensor, */ &opt_3001_sensor, &audio_sensor /* &motion_sensor */);
 
 /*---------------------------------------------------------------------------*/
 
@@ -186,7 +188,12 @@ spi_open(uint8_t index, SPI_Handle* hInst, uint32_t bitRate)
     spi_params.mode = SPI_MASTER;
     spi_params.bitRate = bitRate;
     spi_params.dataSize = 8;
-    spi_params.frameFormat = SPI_POL0_PHA0;
+    /*!NOTICE!
+     *  ICM-20948 requires SPI MODE 3 (POL=1, PHA=1) to function.
+     *  BME-280 supports either MODE 0 or MODE 3.
+     *  Therefore, we can set the bus to mode 3.
+     */
+    spi_params.frameFormat = SPI_POL1_PHA1;
 
     /*
     * Try to open the SPI driver. Accessing the SPI driver also ensures
