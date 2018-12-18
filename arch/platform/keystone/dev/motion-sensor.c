@@ -56,7 +56,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 /*---------------------------------------------------------------------------*/
-#define DEBUG 1 
+#define DEBUG 0 
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #define INV_MSG_ENABLE
@@ -84,14 +84,17 @@ static PIN_State pinState;
 /*---------------------------------------------------------------------------*/
 /* Invensense library adapter */
 
+#define ODR_NONE       0 /* Asynchronous sensors don't need to have a configured ODR */
+
+
 PROCESS(motion_sensor_process, "motion_sensor_process");
 
-#define USE_RAW_ACC 1
-#define USE_RAW_GYR 1
+#define USE_RAW_ACC 0
+#define USE_RAW_GYR 0
 #define USE_GRV     0
 #define USE_CAL_ACC 0
 #define USE_CAL_GYR 0
-#define USE_CAL_MAG 1
+#define USE_CAL_MAG 0
 #define USE_UCAL_GYR 0
 #define USE_UCAL_MAG 0
 #define USE_RV      0    /* requires COMPASS*/
@@ -99,13 +102,13 @@ PROCESS(motion_sensor_process, "motion_sensor_process");
 #define USE_ORI     0    /* requires COMPASS*/
 #define USE_STEPC   0
 #define USE_STEPD   0
-#define USE_SMD     0
-#define USE_BAC     0
-#define USE_TILT    0
-#define USE_PICKUP  0
+#define USE_SMD     1
+#define USE_BAC     1
+#define USE_TILT    1
+#define USE_PICKUP  1
 #define USE_GRAVITY 0
 #define USE_LINACC  0
-#define USE_B2S     0
+#define USE_B2S     1
 
 /* List of virtual sensors we will support */
 static const invn_lib_sensor_t sensor_list[] = {
@@ -134,13 +137,13 @@ static const invn_lib_sensor_t sensor_list[] = {
     { INVN_LIB_SENSOR_TYPE_GAME_ROTATION_VECTOR, 50000 /* 20 Hz */ },
 #endif
 #if USE_RV
-    { INVN_LIB_SENSOR_TYPE_ROTATION_VECTOR, 50000 /* 20 Hz */ },
+    { INVN_LIB_SENSOR_TYPE_ROTATION_VECTOR, 1000000 /* 1 Hz */ },
 #endif
 #if USE_GEORV
-    { INVN_LIB_SENSOR_TYPE_GEOMAG_ROTATION_VECTOR, 50000 /* 20 Hz */ },
+    { INVN_LIB_SENSOR_TYPE_GEOMAG_ROTATION_VECTOR, 1000000 /* 1 Hz */ },
 #endif
 #if USE_ORI
-    { INVN_LIB_SENSOR_TYPE_ORIENTATION, 50000 /* 20 Hz */ },
+    { INVN_LIB_SENSOR_TYPE_ORIENTATION, 1000000 /* 1 Hz */ },
 #endif
 #if USE_STEPC
     { INVN_LIB_SENSOR_TYPE_STEP_COUNTER, ODR_NONE },
@@ -160,8 +163,8 @@ static const invn_lib_sensor_t sensor_list[] = {
 #if USE_PICKUP
     { INVN_LIB_SENSOR_TYPE_PICK_UP_GESTURE, ODR_NONE },
 #endif
-#if USE_GRA
-    { INVN_LIB_SENSOR_TYPE_GRAVITY, 50000 /* 20 Hz */ },
+#if USE_GRAVITY
+    { INVN_LIB_SENSOR_TYPE_GRAVITY, 500000 /* 2 Hz */ },
 #endif
 #if USE_LINACC
     { INVN_LIB_SENSOR_TYPE_LINEAR_ACCELERATION, 50000 /* 20 Hz */ },
@@ -218,11 +221,13 @@ close()
 
 /*---------------------------------------------------------------------------*/
 static int
-spi_write(uint8_t reg, const uint8_t * data, uint32_t len)
+motion_spi_write(uint8_t reg, const uint8_t * data, uint32_t len)
 {
-
     SPI_Transaction spiTransaction;
 
+    /* SPI mode: register bit 7=0 means write. */
+    reg &= 0x7f;
+    PRINTF("spi_write: %02x\n", reg);
     PINCC26XX_setOutputValue(Board_SPI_IMU_CS, 0);
 
     /* Write the register address */
@@ -243,10 +248,13 @@ spi_write(uint8_t reg, const uint8_t * data, uint32_t len)
 }
 /*---------------------------------------------------------------------------*/
 static int
-spi_read(uint8_t reg, uint8_t *data, uint32_t len)
+motion_spi_read(uint8_t reg, uint8_t *data, uint32_t len)
 {
     SPI_Transaction spiTransaction;
 
+    /* SPI mode: register bit 7=1 means read. */
+    reg |= 0x80;
+    PRINTF("spi_read: %02x\n", reg);
     PINCC26XX_setOutputValue(Board_SPI_IMU_CS, 0);
 
     /* Write the register address */
@@ -268,12 +276,12 @@ spi_read(uint8_t reg, uint8_t *data, uint32_t len)
 const invn_lib_host_serif_t invn_lib_serif = {
     0,
     0,
-    spi_read,
-    spi_write,
+    motion_spi_read,
+    motion_spi_write,
     0,
     32*1024, /* max transaction size set to high number to allow single invocation of large transfers. */
     32*1024, /* ditto */
-    3, /* SPI */
+    INVN_LIB_SERIF_TYPE_SPI, /* SPI */
 };
 
 
@@ -440,6 +448,8 @@ value(int type)
  *                When type == SENSORS_HW_INIT we open the PDM and I2S drivers.
  *                When type == SENSORS_ACTIVE and enable==1 we enable the sensor.
  *                When type == SENSORS_ACTIVE and enable==0 we disable the sensor.
+ *                When type == MOTION_SENSOR_SELF_TEST, enable ignored.
+ *               
  */
 static int
 configure(int type, int enable)
@@ -470,7 +480,18 @@ configure(int type, int enable)
       }
     }
     break;
-
+#if 0 /* NOT YET */
+  /* Run a self test */
+  case MOTION_SENSOR_SELF_TEST:
+    /* Don't do anything if we couldn't init the sensor through configure(). */
+    if (motion_sensor_obj.status == MOTION_SENSOR_STATUS_STANDBY) {
+      rv = invn_lib_self_test();
+    }
+    else {
+      rv = MOTION_SENSOR_READING_ERROR;
+    }
+    break;
+#endif
   default:
     break;
   }

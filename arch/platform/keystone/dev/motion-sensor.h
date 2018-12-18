@@ -85,6 +85,7 @@
 #include "lib/invn-lib.h"
 /*---------------------------------------------------------------------------*/
 #define MOTION_SENSOR_READING_ERROR  -1 /* general error */
+#define MOTION_SENSOR_SELF_TEST      ((SENSORS_READY) + 1)
 /*---------------------------------------------------------------------------*/
 /* Module configuration */
 

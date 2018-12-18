@@ -81,7 +81,11 @@ enum invn_lib_msg_level {
     INVN_LIB_MSG_LEVEL_MAX
 };
 
-
+enum invn_lib_serif_type {
+    INVN_LIB_SERIF_TYPE_NONE = 0,
+    INVN_LIB_SERIF_TYPE_I2C = 1,
+    INVN_LIB_SERIF_TYPE_SPI = 2,
+};
 
 typedef struct invn_lib_host_serif
 {

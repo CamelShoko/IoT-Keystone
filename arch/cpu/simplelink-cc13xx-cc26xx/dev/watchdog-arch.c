@@ -39,6 +39,10 @@
  * TI CC26xxware/CC13xxware
  * @{
  *
+ *  The Watchdog counts down at a rate of the device clock SCLK_HF (48 MHz)
+ *  divided by a fixed-division ratio of 32, which equals to 1.5 MHz. The
+ *  Watchdog rate will change if SCLK_HF deviates from 48 MHz.
+ *
  * \file
  * Implementation of the CC13xx/CC26xx watchdog driver.
  */
@@ -56,8 +60,22 @@
 #define WATCHDOG_DISABLE    WATCHDOG_CONF_DISABLE
 #define WATCHDOG_TIMER_TOP  WATCHDOG_CONF_TIMER_TOP
 /*---------------------------------------------------------------------------*/
-static Watchdog_Handle wdt_handle;
+static Watchdog_Handle wdt_handle = NULL;
 /*---------------------------------------------------------------------------*/
+
+static void init(void)
+{
+    Watchdog_init();
+
+    Watchdog_Params wdt_params;
+    Watchdog_Params_init(&wdt_params);
+
+    wdt_params.resetMode = Watchdog_RESET_ON;
+    wdt_params.debugStallMode = Watchdog_DEBUG_STALL_ON;
+
+    wdt_handle = Watchdog_open(Board_WATCHDOG0, &wdt_params);
+}
+
 /**
  * \brief  Initialises the Watchdog module.
  *
@@ -71,15 +89,7 @@ watchdog_init(void)
     return;
   }
 
-  Watchdog_init();
-
-  Watchdog_Params wdt_params;
-  Watchdog_Params_init(&wdt_params);
-
-  wdt_params.resetMode = Watchdog_RESET_ON;
-  wdt_params.debugStallMode = Watchdog_DEBUG_STALL_ON;
-
-  wdt_handle = Watchdog_open(Board_WATCHDOG0, &wdt_params);
+  init();
 }
 /*---------------------------------------------------------------------------*/
 /**
@@ -128,11 +138,17 @@ watchdog_stop(void)
 void
 watchdog_reboot(void)
 {
-  if(WATCHDOG_DISABLE) {
-    return;
+  /* Allow watchdog reboot even if it is configured as DISABLED by
+   * the application.
+   */
+  if (wdt_handle == NULL) {
+    init();
   }
 
-  watchdog_start();
+  /* Used a fixed timeout here, independent of the application
+   * timeout setting.  This value is approx 1000000/1500000 = 0.7 seconds
+   */
+  Watchdog_setReload(wdt_handle, 0xFFFFF);
 
   /* Busy loop until watchdog times out */
   for (;;) { /* hang */ }

@@ -332,11 +332,15 @@ PROCESS_THREAD(data_logger_process, ev, data)
                     if (result == 0) {
                         motion_available = true;
                         PRINTF("ICM-20948 sensor found.\n");
+                        /* Let's activate it.  This will enable the registered virtual sensors. 
+                         * Data for each sensor comes through its registerd callback.
+                         */
+                        SENSORS_ACTIVATE(motion_sensor);
                     }
                     else {
                         PRINTF("ICM-20948 not found. result=%d\n", result);
                         /* Motion sensor is not fully implemented yet. */
-                        //etimer_set(&led_timer, CLOCK_SECOND / 2);
+                        etimer_set(&led_timer, CLOCK_SECOND / 2);
                     }
                 }
             }
