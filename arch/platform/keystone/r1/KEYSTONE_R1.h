@@ -94,10 +94,16 @@ extern I2C_Handle hI2cSensor;
  * might want to turn it off when the system is sleeping to stop 
  * any constant drain that might be occuring (to be measured)
  */
-/* LOW  = RF2 CC1352 Sub-GHz
- * HIGH = RF1 SX1262 LoRa 
+/* CTRL LOW and  NCTRL HIGH   = RF2 CC1352 Sub-GHz
+ * CTRL HIGH and NCTRL LOW, NCTRL HIGH and CTRL HIGH   = RF1 SX1262 LoRa 
+ *
+ *  NCTRL  CTRL
+ *  LOW    LOW     ?
+ *  LOW    HIGH    RF1   SX1262
+ *  HIGH   LOW     RF2   CC1352
+ *  HIGH   HIGH    RF1   SX1262
  */
-#define KEYSTONE_R1_RF_SUB1GHZ            IOID_6 /* CTRL (control pin) */
+#define KEYSTONE_R1_RF_SUB1GHZ_CTRL       IOID_6 /* CTRL (control pin) */
 #define KEYSTONE_R1_RF_SUB1GHZ_NCTRL      IOID_7 /* /CTRL (connect to Vdd) */
 
 /* Digital IOs */
@@ -216,6 +222,30 @@ void KEYSTONE_R1_shutDownExtFlash(void);
  *  to wake the chip up.
  */
 void KEYSTONE_R1_wakeUpExtFlash(void);
+
+
+/*!
+ *  Selects the CC1352 mesh radio port on the antenna switch.
+ */
+void KEYSTONE_R1_setAntennaMeshRadio(void);
+
+/*!
+*   De-Selects the CC1352 mesh radio port on the antenna switch
+*   Should be called after setting the antenna to the mesh radio.
+*/
+void KEYSTONE_R1_unsetAntennaMeshRadio(void);
+
+/*!
+ *  Selects the SX1262 LoRa radio port on the antenna switch.
+ */
+void KEYSTONE_R1_setAntennaLoRaRadio(void);
+
+/*!
+*   De-Selects the SX1262 LoRa mesh radio port on the antenna switch
+*   Should be called after setting the antenna to the LoRa radio.
+*/
+void KEYSTONE_R1_unsetAntennaLoRaRadio(void);
+
 
 /*!
  *  @def    KEYSTONE_R1_ADCBufName

@@ -80,6 +80,7 @@
 #include "rf/rf.h"
 #include "rf/ble-beacond.h"
 #include "rf/ieee-addr.h"
+#include "rf/dot-15-4g.h"
 /*---------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <string.h>
@@ -343,7 +344,7 @@ platform_init_stage_three(void)
           ChipInfo_SupportsBLE() ? "Yes" : "No");
 
 #if (RF_MODE == RF_MODE_SUB_1_GHZ)
-  LOG_INFO("Operating frequency on Sub-1 GHz\n");
+  LOG_INFO("Operating frequency on Sub-1 GHz band " DOT_15_4G_BAND_NAME " \n");
 #elif (RF_MODE == RF_MODE_2_4_GHZ)
   LOG_INFO("Operating frequency on 2.4 GHz\n");
 #endif
