@@ -85,7 +85,7 @@
 #include "net/netstack.h"
 
 //#define DEBUG DEBUG_NONE
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ipv6/uip-debug.h"
 
 
@@ -143,9 +143,25 @@ print_rssi(int start_chan, int end_chan)
     printf("     %s\n", graph_buf);
     memset(graph_buf, ' ', num_channels -2);
     sprintf(graph_buf + num_channels-2, "%d", end_chan);
-    printf("     %d%s\n", start_chan, graph_buf);
+    printf("     %d%s\n\n", start_chan, graph_buf);
 }
 
+void print_stats()
+{
+    /*Find and print largest RSSI measurement and channel */
+    int max = NO_RSSI;
+    int max_chan = -1;
+    for (int c = 0; c < NUM_CHANNELS; c++)
+    {
+        if (rssi_buf[c] > max) {
+            max = rssi_buf[c];
+            max_chan = c;
+        }
+    }
+    printf("Max RSSI is %d on channel %d at frequency %d kHz\n", 
+        max, max_chan, 
+        DOT_15_4G_CHAN0_FREQ + max_chan * DOT_15_4G_FREQ_SPACING);
+}
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(channel_scanner_process, ev, data)
@@ -225,6 +241,7 @@ PROCESS_THREAD(channel_scanner_process, ev, data)
 #else
             print_rssi(DOT_15_4G_CHAN_MIN, DOT_15_4G_CHAN_MAX);
 #endif        
+            print_stats();
     }
 
     PROCESS_END();
