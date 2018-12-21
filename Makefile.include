@@ -249,6 +249,7 @@ ifeq ($(V),1)
   TRACE_OBJDUMP  =
   TRACE_MKDIR =
   TRACE_CP =
+  TRACE_SIZE =
   Q=
 else
   TRACE_CC = @echo "  CC       " $<
@@ -259,6 +260,7 @@ else
   TRACE_OBJDUMP  = @echo "  OBJDUMP  " $< "-->" $@
   TRACE_MKDIR = @echo "  MKDIR    " $@
   TRACE_CP       = @echo "  CP       " $< "-->" $@
+  TRACE_SIZE = @echo "  SIZE       " $@
   Q=@
 endif
 
@@ -413,6 +415,8 @@ endif
 %.$(TARGET): $(BUILD_DIR_BOARD)/%.$(TARGET)
 	$(TRACE_CP)
 	$(Q)cp $< $@
+	$(TRACE_SIZE)
+	$(Q)$(SIZE) $@
 
 %.ramprof: %.$(TARGET)
 	$(NM) -S -td --size-sort $< | grep -i " [abdrw] " | cut -d' ' -f2,4

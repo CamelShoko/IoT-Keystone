@@ -86,7 +86,7 @@ bme280_arch_i2c_read_mem(uint8_t addr, uint8_t reg, uint8_t *rxbuf, uint8_t byte
     uint8_t txbuf[1];
 
     /* SPI mode: register bit 7=1 means read. */
-    txbuf[0] = reg |= 0x80;
+    txbuf[0] = reg | 0x80;
 
     PINCC26XX_setOutputValue(Board_SPI_BME280_CS, 0); /* Assert CS */
 

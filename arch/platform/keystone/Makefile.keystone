@@ -65,13 +65,16 @@ CONTIKI_TARGET_SOURCEFILES += audio-sensor.c
 CONTIKI_TARGET_SOURCEFILES += PDMCC26XX_contiki.c
 CONTIKI_TARGET_SOURCEFILES += PDMCC26XX_util_contiki.c
 CONTIKI_TARGET_SOURCEFILES += pdm2pcm_cc26x2_gnu.s
-
+CONTIKI_TARGET_SOURCEFILES += motion-sensor.c
 
 # Build the lora driver
 CONTIKI_TARGET_SOURCEFILES += lora-radio.c sx126x.c lora-delay.c lora-timer.c 
 CONTIKI_TARGET_SOURCEFILES += sx1262-board.c lora-systime.c lora-utilities.c
 
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
+
+# Include the ICM-20948 sensor driver library
+TARGET_LIBFILES += $(FAMILY_PATH)/lib/invn-lib-20948-3.8.9.akeystone
 
 # Pull in the correct CPU makefile
 CPU_FAMILY = cc13xx-cc26xx

@@ -84,6 +84,7 @@
  * DOT_15_4G_CHAN0_FREQ is specified here in KHz
  */
 #if (DOT_15_4G_FREQ_BAND_ID == DOT_15_4G_FREQ_BAND_470)
+#define DOT_15_4G_BAND_NAME          "470"
 #define DOT_15_4G_CHAN_MIN           0
 #define DOT_15_4G_CHAN_MAX           198
 #define DOT_15_4G_FREQ_SPACING       200
@@ -93,6 +94,7 @@
 #define PROP_MODE_CONF_LO_DIVIDER    0x0A
 
 #elif (DOT_15_4G_FREQ_BAND_ID == DOT_15_4G_FREQ_BAND_780)
+#define DOT_15_4G_BAND_NAME          "780"
 #define DOT_15_4G_CHAN_MIN           0
 #define DOT_15_4G_CHAN_MAX           38
 #define DOT_15_4G_FREQ_SPACING       200
@@ -102,6 +104,7 @@
 #define PROP_MODE_CONF_LO_DIVIDER    0x06
 
 #elif (DOT_15_4G_FREQ_BAND_ID == DOT_15_4G_FREQ_BAND_863)
+#define DOT_15_4G_BAND_NAME          "863"
 #define DOT_15_4G_CHAN_MIN           0
 #define DOT_15_4G_CHAN_MAX           33
 #define DOT_15_4G_FREQ_SPACING       200
@@ -111,6 +114,7 @@
 #define PROP_MODE_CONF_LO_DIVIDER    0x05
 
 #elif (DOT_15_4G_FREQ_BAND_ID == DOT_15_4G_FREQ_BAND_915)
+#define DOT_15_4G_BAND_NAME          "915"
 #define DOT_15_4G_CHAN_MIN           0
 #define DOT_15_4G_CHAN_MAX           128
 #define DOT_15_4G_FREQ_SPACING       200
@@ -120,6 +124,7 @@
 #define PROP_MODE_CONF_LO_DIVIDER    0x05
 
 #elif (DOT_15_4G_FREQ_BAND_ID == DOT_15_4G_FREQ_BAND_920)
+#define DOT_15_4G_BAND_NAME          "920"
 #define DOT_15_4G_CHAN_MIN           0
 #define DOT_15_4G_CHAN_MAX           37
 #define DOT_15_4G_FREQ_SPACING       200
@@ -129,6 +134,7 @@
 #define PROP_MODE_CONF_LO_DIVIDER    0x05
 
 #elif (DOT_15_4G_FREQ_BAND_ID == DOT_15_4G_FREQ_BAND_950)
+#define DOT_15_4G_BAND_NAME          "950"
 #define DOT_15_4G_CHAN_MIN           0
 #define DOT_15_4G_CHAN_MAX           32
 #define DOT_15_4G_FREQ_SPACING       200
@@ -138,6 +144,7 @@
 #define PROP_MODE_CONF_LO_DIVIDER    0x05
 
 #elif (DOT_15_4G_FREQ_BAND_ID == DOT_15_4G_FREQ_BAND_2450)
+#define DOT_15_4G_BAND_NAME          "2450"
 #define DOT_15_4G_CHAN_MIN           11
 #define DOT_15_4G_CHAN_MAX           26
 #define DOT_15_4G_FREQ_SPACING       5000

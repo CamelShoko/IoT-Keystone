@@ -56,6 +56,7 @@
 
 static bool bme_available = false;
 static bool opt3001_available = false;
+static bool motion_available = false;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(data_logger_process, "data logger");
@@ -323,6 +324,25 @@ PROCESS_THREAD(data_logger_process, ev, data)
                 /* Trigger FFT computation */
                 fft_sample_count = NUM_FFT_SAMPLES;
 
+                /*-----MOTION---------------------------------*/
+
+                if (!motion_available) {
+                    /* Identify the sensor. */
+                    int result = motion_sensor.configure(SENSORS_HW_INIT, 0);
+                    if (result == 0) {
+                        motion_available = true;
+                        PRINTF("ICM-20948 sensor found.\n");
+                        /* Let's activate it.  This will enable the registered virtual sensors. 
+                         * Data for each sensor comes through its registerd callback.
+                         */
+                        SENSORS_ACTIVATE(motion_sensor);
+                    }
+                    else {
+                        PRINTF("ICM-20948 not found. result=%d\n", result);
+                        /* Motion sensor is not fully implemented yet. */
+                        etimer_set(&led_timer, CLOCK_SECOND / 2);
+                    }
+                }
             }
         } else if (ev == sensors_event) {
             if (data == &opt_3001_sensor) {

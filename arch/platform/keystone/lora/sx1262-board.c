@@ -439,13 +439,13 @@ uint8_t SX126xGetDeviceId( void )
 void SX126xAntSwOn( void )
 {
     //GpioInit( &AntPow, RADIO_ANT_SWITCH_POWER, PIN_OUTPUT, PIN_PUSH_PULL, PIN_PULL_UP, 1 );
-    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ, 1);
+    Board_setAntennaLoRaRadio();
 }
 
 void SX126xAntSwOff( void )
 {
     //GpioInit( &AntPow, RADIO_ANT_SWITCH_POWER, PIN_ANALOGIC, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
-    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ, 0);
+    Board_unsetAntennaLoRaRadio();
 }
 
 bool SX126xCheckRfFrequency( uint32_t frequency )

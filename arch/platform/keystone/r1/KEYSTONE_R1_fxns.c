@@ -51,6 +51,13 @@
 #include "lib/sensors.h"
 #include "batmon-sensor.h"
 
+ /*---------------------------------------------------------------------------*/
+ /* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "Board"
+#define LOG_LEVEL LOG_LEVEL_NONE
+ /*---------------------------------------------------------------------------*/
+
 extern void SX126xIoInit(void);
 
 /*
@@ -166,34 +173,31 @@ void Board_initHook()
     SENSORS_ACTIVATE(batmon_sensor);
 }
 
-/*
- *  For the SysConfig generated Board.h file, Board_RF_SUB1GHZ will not be
- *  defined unless the RF module is added to the configuration.  Therefore,
- *  we don't include this code if Board_RF_SUB1GHZ is not defined.
- */
-#if defined(Board_RF_SUB1GHZ)
 
 /*
  * ======== rfDriverCallback ========
  * This is an implementation for the CC1352R1 launchpad which uses a
  * single signal for antenna switching.
+ *
  */
 void rfDriverCallback(RF_Handle client, RF_GlobalEvent events, void *arg)
 {
+    /* Note this is execute in a context that won't allow UART messages. */
     (void)client;
     RF_RadioSetup* setupCommand = (RF_RadioSetup*)arg;
 
     if ((events & RF_GlobalEventRadioSetup) &&
             (setupCommand->common.commandNo == CMD_PROP_RADIO_DIV_SETUP)) {
-        /* Sub-1 GHz, requires antenna switch high */
-        PINCC26XX_setOutputValue(Board_RF_SUB1GHZ, 1);
+
+        //LOG_DBG("CC1352 Sub-GHz antenna selected\n");
+        KEYSTONE_R1_setAntennaMeshRadio();
     }
     else if (events & RF_GlobalEventRadioPowerDown) {
+        //LOG_DBG("CC1352 Sub-GHz antenna de-selected\n");
         /* Disable antenna switch to save current */
-        PINCC26XX_setOutputValue(Board_RF_SUB1GHZ, 0);
+        KEYSTONE_R1_unsetAntennaMeshRadio();
     }
 }
-#endif
 
 
 /* Get the platform battery level for the LoRaMac stack */
@@ -205,4 +209,59 @@ uint8_t BoardGetBatteryLevel(void)
 
     return (uint8_t)value;
 
+}
+/*
+*  NCTRL  CTRL
+*  LOW    LOW     ?
+*  LOW    HIGH    RF1   SX1262
+*  HIGH   LOW     RF2   CC1352
+*  HIGH   HIGH    RF1   SX1262
+*/
+void KEYSTONE_R1_setAntennaMeshRadio(void)
+{
+    /* Bring CTRL LOW first, then NCTRL HIGH  */
+    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ_CTRL, 0);
+    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ_NCTRL, 1);
+}
+
+/*
+*  NCTRL  CTRL
+*  LOW    LOW     ?
+*  LOW    HIGH    RF1   SX1262
+*  HIGH   LOW     RF2   CC1352
+*  HIGH   HIGH    RF1   SX1262
+*/
+void KEYSTONE_R1_unsetAntennaMeshRadio(void)
+{
+    /* Bring CTRL and NCTRL LOW  */
+    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ_CTRL, 0);
+    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ_NCTRL, 0);
+}
+
+/*
+*  NCTRL  CTRL
+*  LOW    LOW     ?
+*  LOW    HIGH    RF1   SX1262
+*  HIGH   LOW     RF2   CC1352
+*  HIGH   HIGH    RF1   SX1262
+*/
+void KEYSTONE_R1_setAntennaLoRaRadio(void)
+{
+    /* Bring NCTRL LOW first, then CTRL HIGH  */
+    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ_NCTRL, 0);
+    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ_CTRL, 1);
+}
+
+/*
+*  NCTRL  CTRL
+*  LOW    LOW     ?
+*  LOW    HIGH    RF1   SX1262
+*  HIGH   LOW     RF2   CC1352
+*  HIGH   HIGH    RF1   SX1262
+*/
+void KEYSTONE_R1_unsetAntennaLoRaRadio(void)
+{
+    /* Bring NCTRL then CTRL LOW  */
+    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ_NCTRL, 0);
+    PINCC26XX_setOutputValue(Board_RF_SUB1GHZ_CTRL, 0);
 }

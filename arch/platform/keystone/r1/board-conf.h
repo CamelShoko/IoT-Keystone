@@ -99,6 +99,15 @@
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**
+* \name Keystone board r1 sub-GHz band
+*
+*  Needs to be set to 868 for EU board variants.
+* @{
+*/
+#define DOT_15_4G_CONF_FREQ_BAND_ID     DOT_15_4G_FREQ_BAND_915
+/** @} */
+/*---------------------------------------------------------------------------*/
+/**
  * \name The external flash SPI CS pin, defined in Board.h.
  *
  * Note that SPI SCK, MOSI and MISO does not need to be defined, as they are

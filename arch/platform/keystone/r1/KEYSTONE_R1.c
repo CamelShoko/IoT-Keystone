@@ -613,9 +613,9 @@ const PIN_Config BoardGpioInitTable[] = {
     KEYSTONE_R1_I2C0_SCL0 | PIN_INPUT_EN | PIN_OPENDRAIN,                                              /* I2C bus has external pull-ups */
     KEYSTONE_R1_I2C0_SDA0 | PIN_INPUT_EN | PIN_OPENDRAIN,                                              /* I2C bus has external pull-ups */
 
-    /* RF */
-    KEYSTONE_R1_RF_SUB1GHZ | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,        /* RF Switch defaults to CC1352 path */
-    KEYSTONE_R1_RF_SUB1GHZ_NCTRL | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,  /* RF Switch on/off */
+    /* RF - startup PE4259 "disabled" with both CTRL, NCTRL LOW*/
+    KEYSTONE_R1_RF_SUB1GHZ_CTRL  | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MIN,  /* RF Switch defaults to off */
+    KEYSTONE_R1_RF_SUB1GHZ_NCTRL | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MIN,  /* RF Switch on/off */
     PIN_TERMINATE
 };
 
