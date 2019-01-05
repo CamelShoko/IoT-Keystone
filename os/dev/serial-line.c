@@ -53,6 +53,8 @@
 #define END 0x0a
 #endif
 
+#define BS  (0x8)
+
 static struct ringbuf rxbuf;
 static uint8_t rxbuf_data[BUFSIZE];
 
@@ -108,7 +110,12 @@ PROCESS_THREAD(serial_line_process, ev, data)
       PROCESS_YIELD();
     } else {
       if(c != END) {
-        if(ptr < BUFSIZE-1) {
+        /* handle backspace */
+        if (c == BS) {
+          if (ptr > 0) {
+              ptr--;
+          }
+        } else if(ptr < BUFSIZE-1) {
           buf[ptr++] = (uint8_t)c;
         } else {
           /* Ignore character (wait for EOL) */

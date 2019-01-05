@@ -314,6 +314,7 @@ platform_init_stage_two(void)
   if(!trng_rand((uint8_t *)&seed, sizeof(seed), TRNG_WAIT_FOREVER)) {
     /* Default to some hard-coded seed. */
     seed = 0x1234;
+    LOG_WARN("TRNG random seeding failed.\n");
   }
   random_init(seed);
 
