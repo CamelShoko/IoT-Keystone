@@ -373,6 +373,22 @@ PT_THREAD(cmd_help(struct pt *pt, shell_output_func output, char *args))
 
   PT_END(pt);
 }
+/*---------------------------------------------------------------------------*/
+static
+PT_THREAD(cmd_ps(struct pt *pt, shell_output_func output, char *args))
+{
+    struct process *p;
+    PT_BEGIN(pt);
+
+    SHELL_OUTPUT(output, "Processes:\n");
+    for (p = PROCESS_LIST(); p != NULL; p = p->next) {
+        char namebuf[30];
+        strncpy(namebuf, PROCESS_NAME_STRING(p), sizeof(namebuf));
+        SHELL_OUTPUT(output, " %s\n", namebuf);
+    }
+
+    PT_END(pt);
+}
 #if UIP_CONF_IPV6_RPL
 /*---------------------------------------------------------------------------*/
 static
@@ -864,6 +880,7 @@ const struct shell_command_t builtin_shell_commands[] = {
   { "help",                 cmd_help,                 "'> help': Shows this help" },
   { "reboot",               cmd_reboot,               "'> reboot': Reboot the board by watchdog_reboot()" },
   { "log",                  cmd_log,                  "'> log module level': Sets log level (0--4) for a given module (or \"all\"). For module \"mac\", level 4 also enables per-slot logging." },
+  { "ps",                   cmd_ps,                   "'> ps': list all running processes" },
 #if NETSTACK_CONF_WITH_IPV6
   { "ip-addr",              cmd_ipaddr,               "'> ip-addr': Shows all IPv6 addresses" },
   { "ip-nbr",               cmd_ip_neighbors,         "'> ip-nbr': Shows all IPv6 neighbors" },
