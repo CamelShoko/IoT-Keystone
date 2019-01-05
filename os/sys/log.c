@@ -64,6 +64,7 @@ int curr_log_level_6top = LOG_CONF_LEVEL_6TOP;
 int curr_log_level_coap = LOG_CONF_LEVEL_COAP;
 int curr_log_level_lwm2m = LOG_CONF_LEVEL_LWM2M;
 int curr_log_level_main = LOG_CONF_LEVEL_MAIN;
+int curr_log_level_lora = LOG_CONF_LEVEL_LORA;
 
 struct log_module all_modules[] = {
   {"rpl", &curr_log_level_rpl, LOG_CONF_LEVEL_RPL},
@@ -77,6 +78,7 @@ struct log_module all_modules[] = {
   {"coap", &curr_log_level_coap, LOG_CONF_LEVEL_COAP},
   {"lwm2m", &curr_log_level_lwm2m, LOG_CONF_LEVEL_LWM2M},
   {"main", &curr_log_level_main, LOG_CONF_LEVEL_MAIN},
+  {"lora", &curr_log_level_lora, LOG_CONF_LEVEL_LORA},
   {NULL, NULL, 0},
 };
 

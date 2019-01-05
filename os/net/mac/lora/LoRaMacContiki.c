@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, This. Is. IoT. - https://thisisiot.io
+* Copyright (c) 2018, THIS. IS. IoT. - https://thisisiot.io
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -68,6 +68,7 @@
 #include <string.h>
 #include "contiki.h"
 #include "net\linkaddr.h"
+#include "dev\leds.h"
 #include "lora-utilities.h"
 #include "LoRaMac.h"
 #include "lora-conf.h"
@@ -81,6 +82,13 @@
 #define ACTIVE_REGION LORAMAC_REGION_US915
 
 #endif
+
+/*---------------------------------------------------------------------------*/
+/* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "LoRaContik"
+#define LOG_LEVEL LOG_LEVEL_LORA
+/*---------------------------------------------------------------------------*/
 
 /*!
 * Defines the application data transmission duty cycle. 5s, value in [ms].
@@ -268,12 +276,6 @@ LoRaMacHandlerAppData_t AppData =
     .Port = 0
 };
 
-/*!
-* LED GPIO pins objects
-*/
-//extern Gpio_t Led1; // Tx
-//extern Gpio_t Led2; // Rx
-
                     /*!
                     * MAC status strings
                     */
@@ -337,13 +339,13 @@ process_event_t lora_op_complete_event;
 static struct process* notify_process;
 
 /* Notify the user process of a "lora_op_complete_event */
-static void notifyUserEvent()
+static void notifyUserEvent(EventType_t type)
 {
     /* if notify_process is null nothing happens.
     * once notified, the event is cleared.
     */
     if (notify_process != NULL) {
-        process_post(notify_process, lora_op_complete_event, NULL);
+        process_post(notify_process, lora_op_complete_event, (void*)type);
         notify_process = NULL;
     }
 }
@@ -376,7 +378,7 @@ void PrintHexBuffer(uint8_t *buffer, uint8_t size)
     {
         if (newline != 0)
         {
-            printf("\r\n");
+            printf("\n");
             newline = 0;
         }
 
@@ -387,7 +389,7 @@ void PrintHexBuffer(uint8_t *buffer, uint8_t size)
             newline = 1;
         }
     }
-    printf("\r\n");
+    printf("\n");
 }
 
 /*!
@@ -404,12 +406,11 @@ static void JoinNetwork(void)
 
     // Starts the join procedure
     status = LoRaMacMlmeRequest(&mlmeReq);
-    printf("\r\n###### ===== MLME-Request - MLME_JOIN ==== ######\r\n");
-    printf("STATUS      : %s\r\n", MacStatusStrings[status]);
+    LOG_INFO("MLME-Request - MLME_JOIN - Status: %s\n", MacStatusStrings[status]);
 
     if (status == LORAMAC_STATUS_OK)
     {
-        printf("###### ===== JOINING ==== ######\r\n");
+        LOG_INFO("Joining\n");
         DeviceState = DEVICE_STATE_SLEEP;
     }
     else
@@ -508,8 +509,9 @@ static bool SendFrame(void)
 
     LoRaMacStatus_t status;
     status = LoRaMacMcpsRequest(&mcpsReq);
-    printf("\r\n###### ===== MCPS-Request ==== ######\r\n");
-    printf("STATUS      : %s\r\n", MacStatusStrings[status]);
+    LOG_INFO("MCPS-Request type:%d port:%d size:%d rate:%d. Status : %s\n",
+        AppData.MsgType, AppData.Port, AppData.BufferSize, mcpsReq.Req.Unconfirmed.Datarate,
+        MacStatusStrings[status]);
 
     if (status == LORAMAC_STATUS_OK)
     {
@@ -555,7 +557,7 @@ static void OnLed1TimerEvent(void)
 {
     TimerStop(&Led1Timer);
     // Switch LED 1 OFF
-    //GpioWrite(&Led1, 0);
+    leds_single_off(LEDS_GREEN);
 }
 
 /*!
@@ -565,7 +567,7 @@ static void OnLed2TimerEvent(void)
 {
     TimerStop(&Led2Timer);
     // Switch LED 2 OFF
-    //GpioWrite(&Led2, 0);
+    leds_single_off(LEDS_RED);
 }
 
 /*!
@@ -576,8 +578,7 @@ static void OnLed2TimerEvent(void)
 */
 static void McpsConfirm(McpsConfirm_t *mcpsConfirm)
 {
-    printf("\r\n###### ===== MCPS-Confirm ==== ######\r\n");
-    printf("STATUS      : %s\r\n", EventInfoStatusStrings[mcpsConfirm->Status]);
+    LOG_INFO("MCPS-Confirm. Status : %s\n", EventInfoStatusStrings[mcpsConfirm->Status]);
     if (mcpsConfirm->Status != LORAMAC_EVENT_INFO_STATUS_OK)
     {
     }
@@ -608,7 +609,7 @@ static void McpsConfirm(McpsConfirm_t *mcpsConfirm)
         }
 
         // Switch LED 1 ON
-        //GpioWrite(&Led1, 1);
+        leds_single_on(LEDS_GREEN);
         TimerStart(&Led1Timer);
     }
     MibRequestConfirm_t mibGet;
@@ -617,42 +618,38 @@ static void McpsConfirm(McpsConfirm_t *mcpsConfirm)
     mibReq.Type = MIB_DEVICE_CLASS;
     LoRaMacMibGetRequestConfirm(&mibReq);
 
-    printf("\r\n###### ===== UPLINK FRAME %lu ==== ######\r\n", mcpsConfirm->UpLinkCounter);
-    printf("\r\n");
-
-    printf("CLASS       : %c\r\n", "ABC"[mibReq.Param.Class]);
-    printf("\r\n");
-    printf("TX PORT     : %d\r\n", AppData.Port);
+    LOG_INFO("UPLINK FRAME %lu Class:%c TX port:%d\n",
+        mcpsConfirm->UpLinkCounter, 
+        "ABC"[mibReq.Param.Class],
+        AppData.Port);
 
     if (AppData.BufferSize != 0)
     {
-        printf("TX DATA     : ");
         if (AppData.MsgType == LORAMAC_HANDLER_CONFIRMED_MSG)
         {
-            printf("CONFIRMED - %s\r\n", (mcpsConfirm->AckReceived != 0) ? "ACK" : "NACK");
+            LOG_INFO("TX CONFIRMED - %s | ", (mcpsConfirm->AckReceived != 0) ? "ACK" : "NACK");
         }
         else
         {
-            printf("UNCONFIRMED\r\n");
+            LOG_INFO("TX UNCONFIRMED | ");
         }
         PrintHexBuffer(AppData.Buffer, AppData.BufferSize);
     }
 
-    printf("\r\n");
-    printf("DATA RATE   : DR_%d\r\n", mcpsConfirm->Datarate);
+    LOG_INFO("DATA RATE   : DR_%d\n", mcpsConfirm->Datarate);
 
     mibGet.Type = MIB_CHANNELS;
     if (LoRaMacMibGetRequestConfirm(&mibGet) == LORAMAC_STATUS_OK)
     {
-        printf("U/L FREQ    : %lu\r\n", mibGet.Param.ChannelList[mcpsConfirm->Channel].Frequency);
+        LOG_INFO("U/L FREQ    : %lu\n", mibGet.Param.ChannelList[mcpsConfirm->Channel].Frequency);
     }
 
-    printf("TX POWER    : %d\r\n", mcpsConfirm->TxPower);
+    LOG_INFO("TX POWER    : %d\n", mcpsConfirm->TxPower);
 
     mibGet.Type = MIB_CHANNELS_MASK;
     if (LoRaMacMibGetRequestConfirm(&mibGet) == LORAMAC_STATUS_OK)
     {
-        printf("CHANNEL MASK: ");
+        LOG_INFO("CHANNEL MASK: ");
 #if defined( REGION_AS923 ) || defined( REGION_CN779 ) || \
     defined( REGION_EU868 ) || defined( REGION_IN865 ) || \
     defined( REGION_KR920 ) || defined( REGION_EU433 ) || \
@@ -671,10 +668,8 @@ static void McpsConfirm(McpsConfirm_t *mcpsConfirm)
         {
             printf("%04X ", mibGet.Param.ChannelsMask[i]);
         }
-        printf("\r\n");
+        printf("\n");
     }
-
-    printf("\r\n");
 }
 
 /*!
@@ -685,8 +680,7 @@ static void McpsConfirm(McpsConfirm_t *mcpsConfirm)
 */
 static void McpsIndication(McpsIndication_t *mcpsIndication)
 {
-    printf("\r\n###### ===== MCPS-Indication ==== ######\r\n");
-    printf("STATUS      : %s\r\n", EventInfoStatusStrings[mcpsIndication->Status]);
+    LOG_INFO("MCPS-Indication. Status : %s\n", EventInfoStatusStrings[mcpsIndication->Status]);
     if (mcpsIndication->Status != LORAMAC_EVENT_INFO_STATUS_OK)
     {
         return;
@@ -822,8 +816,7 @@ static void McpsIndication(McpsIndication_t *mcpsIndication)
                     MlmeReq_t mlmeReq;
                     mlmeReq.Type = MLME_LINK_CHECK;
                     LoRaMacStatus_t status = LoRaMacMlmeRequest(&mlmeReq);
-                    printf("\r\n###### ===== MLME-Request - MLME_LINK_CHECK ==== ######\r\n");
-                    printf("STATUS      : %s\r\n", MacStatusStrings[status]);
+                    LOG_INFO("MLME-Request - MLME_LINK_CHECK. Status : %s\n", MacStatusStrings[status]);
                 }
                 break;
                 case 6: // (ix)
@@ -854,8 +847,7 @@ static void McpsIndication(McpsIndication_t *mcpsIndication)
                         mlmeReq.Type = MLME_TXCW;
                         mlmeReq.Req.TxCw.Timeout = (uint16_t)((mcpsIndication->Buffer[1] << 8) | mcpsIndication->Buffer[2]);
                         LoRaMacStatus_t status = LoRaMacMlmeRequest(&mlmeReq);
-                        printf("\r\n###### ===== MLME-Request - MLME_TXCW ==== ######\r\n");
-                        printf("STATUS      : %s\r\n", MacStatusStrings[status]);
+                        LOG_INFO("MLME-Request - MLME_TXCW. Status : %s\n", MacStatusStrings[status]);
                     }
                     else if (mcpsIndication->BufferSize == 7)
                     {
@@ -865,8 +857,7 @@ static void McpsIndication(McpsIndication_t *mcpsIndication)
                         mlmeReq.Req.TxCw.Frequency = (uint32_t)((mcpsIndication->Buffer[3] << 16) | (mcpsIndication->Buffer[4] << 8) | mcpsIndication->Buffer[5]) * 100;
                         mlmeReq.Req.TxCw.Power = mcpsIndication->Buffer[6];
                         LoRaMacStatus_t status = LoRaMacMlmeRequest(&mlmeReq);
-                        printf("\r\n###### ===== MLME-Request - MLME_TXCW1 ==== ######\r\n");
-                        printf("STATUS      : %s\r\n", MacStatusStrings[status]);
+                        LOG_INFO("MLME-Request - MLME_TXCW1. Status : %s\n", MacStatusStrings[status]);
                     }
                     ComplianceTest.State = 1;
                 }
@@ -882,7 +873,7 @@ static void McpsIndication(McpsIndication_t *mcpsIndication)
     }
 
     // Switch LED 2 ON for each received downlink
-    //GpioWrite(&Led2, 1);
+    leds_single_on(LEDS_RED);
     TimerStart(&Led2Timer);
 
     const char *slotStrings[] = { "1", "2", "C", "Ping-Slot", "Multicast Ping-Slot" };
@@ -899,24 +890,22 @@ static void McpsIndication(McpsIndication_t *mcpsIndication)
         snr = (mcpsIndication->Snr & 0xFF) >> 2;
     }
 
-    printf("\r\n###### ===== DOWNLINK FRAME %lu ==== ######\r\n", mcpsIndication->DownLinkCounter);
+    LOG_INFO("DOWNLINK FRAME %lu RX WINDOW : %s RX PORT : %d\n", 
+        mcpsIndication->DownLinkCounter,
+        slotStrings[mcpsIndication->RxSlot],
+        mcpsIndication->Port);
 
-    printf("RX WINDOW   : %s\r\n", slotStrings[mcpsIndication->RxSlot]);
-
-    printf("RX PORT     : %d\r\n", mcpsIndication->Port);
 
     if (mcpsIndication->BufferSize != 0)
     {
-        printf("RX DATA     : \r\n");
+        LOG_INFO("RX DATA : ");
         PrintHexBuffer(mcpsIndication->Buffer, mcpsIndication->BufferSize);
     }
 
-    printf("\r\n");
-    printf("DATA RATE   : DR_%d\r\n", mcpsIndication->RxDatarate);
-    printf("RX RSSI     : %d\r\n", mcpsIndication->Rssi);
-    printf("RX SNR      : %ld\r\n", snr);
-
-    printf("\r\n");
+    LOG_INFO("RX DATA RATE : DR_%d RSSI : %d SNR : %ld\r\n",
+        mcpsIndication->RxDatarate,
+        mcpsIndication->Rssi,
+        snr);
 }
 
 /*!
@@ -927,8 +916,7 @@ static void McpsIndication(McpsIndication_t *mcpsIndication)
 */
 static void MlmeConfirm(MlmeConfirm_t *mlmeConfirm)
 {
-    printf("\r\n###### ===== MLME-Confirm ==== ######\r\n");
-    printf("STATUS      : %s\r\n", EventInfoStatusStrings[mlmeConfirm->Status]);
+    LOG_INFO("MLME-Confirm. Status : %s\n", EventInfoStatusStrings[mlmeConfirm->Status]);
     if (mlmeConfirm->Status != LORAMAC_EVENT_INFO_STATUS_OK)
     {
     }
@@ -939,23 +927,20 @@ static void MlmeConfirm(MlmeConfirm_t *mlmeConfirm)
         if (mlmeConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK)
         {
             MibRequestConfirm_t mibGet;
-            printf("###### ===== JOINED ==== ######\r\n");
-            printf("\r\nOTAA\r\n\r\n");
+            LOG_INFO("Joined OTAA.\n");
 
             mibGet.Type = MIB_DEV_ADDR;
             LoRaMacMibGetRequestConfirm(&mibGet);
-            printf("DevAddr     : %08lX\r\n", mibGet.Param.DevAddr);
+            LOG_INFO("Device addr     : %08lX\n", mibGet.Param.DevAddr);
 
-            printf("\n\r\n");
             mibGet.Type = MIB_CHANNELS_DATARATE;
             LoRaMacMibGetRequestConfirm(&mibGet);
-            printf("DATA RATE   : DR_%d\r\n", mibGet.Param.ChannelsDatarate);
-            printf("\r\n");
+            LOG_INFO("Data rate   : DR_%d\n", mibGet.Param.ChannelsDatarate);
             // Status is OK, node has joined the network
             DeviceState = DEVICE_STATE_SEND;
 
             /* Notify user process of successful join */
-            notifyUserEvent();
+            notifyUserEvent(EventType_JOINED);
         }
         else
         {
@@ -996,8 +981,7 @@ static void MlmeIndication(MlmeIndication_t *mlmeIndication)
 {
     if (mlmeIndication->Status != LORAMAC_EVENT_INFO_STATUS_BEACON_LOCKED)
     {
-        printf("\r\n###### ===== MLME-Indication ==== ######\r\n");
-        printf("STATUS      : %s\r\n", EventInfoStatusStrings[mlmeIndication->Status]);
+        LOG_INFO("MLME-Indication. Status : %s\n", EventInfoStatusStrings[mlmeIndication->Status]);
     }
     if (mlmeIndication->Status != LORAMAC_EVENT_INFO_STATUS_OK)
     {
@@ -1020,6 +1004,9 @@ void OnMacProcessNotify(void)
     process_post(&loramac_process, PROCESS_EVENT_POLL, 0);
 }
 
+#define xstr(s) str(s)
+#define str(s) #s
+
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(loramac_process, ev, data)
 {
@@ -1029,6 +1016,10 @@ PROCESS_THREAD(loramac_process, ev, data)
     static LoRaMacStatus_t status;
 
     PROCESS_BEGIN();
+
+    leds_off(LEDS_ALL);
+
+    LOG_INFO("LoRaMacContiki starting for region: " xstr(ACTIVE_REGION) ".\n");
 
     lora_op_complete_event = process_alloc_event();
 
@@ -1045,8 +1036,6 @@ PROCESS_THREAD(loramac_process, ev, data)
 
     DeviceState = DEVICE_STATE_RESTORE;
 
-    printf("LoRaMacContiki starting.\r\n\r\n");
-
     while (1)
     {
         // Process Radio IRQ
@@ -1062,7 +1051,7 @@ PROCESS_THREAD(loramac_process, ev, data)
             // Try to restore from NVM and query the mac if possible.
             if (NvmCtxMgmtRestore() == NVMCTXMGMT_STATUS_SUCCESS)
             {
-                printf("\r\n###### ===== CTXS RESTORED ==== ######\r\n\r\n");
+                LOG_INFO("###### ===== CTXS RESTORED ==== ######\n");
             }
             else
             {
@@ -1166,35 +1155,29 @@ PROCESS_THREAD(loramac_process, ev, data)
         }
         else if (DeviceState == DEVICE_STATE_JOIN)
         {
-            printf("DevEui      : %02X", DevEui[0]);
-            for (int i = 1; i < 8; i++)
-            {
-                printf("-%02X", DevEui[i]);
-            }
-            printf("\r\n");
-            printf("AppEui      : %02X", JoinEui[0]);
-            for (int i = 1; i < 8; i++)
-            {
-                printf("-%02X", JoinEui[i]);
-            }
-            printf("\r\n");
-            printf("AppKey      : %02X", NwkKey[0]);
-            for (int i = 1; i < 16; i++)
-            {
-                printf(" %02X", NwkKey[i]);
-            }
-            printf("\n\r\n");
+            LOG_INFO("DevEui      : %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X\n", 
+                DevEui[0], DevEui[1], DevEui[2], DevEui[3],
+                DevEui[4], DevEui[5], DevEui[6], DevEui[7]);
+
+            LOG_INFO("AppEui      : %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X\n", 
+                JoinEui[0], JoinEui[1], JoinEui[2], JoinEui[3],
+                JoinEui[4], JoinEui[5], JoinEui[6], JoinEui[7]);
+
+            LOG_INFO("AppKey      : %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+                NwkKey[0], NwkKey[1], NwkKey[2], NwkKey[3], NwkKey[4], NwkKey[5], NwkKey[6], NwkKey[7],
+                NwkKey[8], NwkKey[9], NwkKey[10], NwkKey[11], NwkKey[12], NwkKey[13], NwkKey[14], NwkKey[15]);
+
 #if( OVER_THE_AIR_ACTIVATION == 0 )
-            printf("###### ===== JOINED ==== ######\r\n");
-            printf("\r\nABP\r\n\r\n");
-            printf("DevAddr     : %08lX\r\n", DevAddr);
-            printf("NwkSKey     : %02X", FNwkSIntKey[0]);
+            LOG_INFO("###### ===== JOINED ==== ######\r\n");
+            LOG_INFO("\r\nABP\r\n\r\n");
+            LOG_INFO("DevAddr     : %08lX\r\n", DevAddr);
+            LOG_INFO("NwkSKey     : %02X", FNwkSIntKey[0]);
             for (int i = 1; i < 16; i++)
             {
                 printf(" %02X", FNwkSIntKey[i]);
             }
             printf("\r\n");
-            printf("AppSKey     : %02X", AppSKey[0]);
+            LOG_INFO("AppSKey     : %02X", AppSKey[0]);
             for (int i = 1; i < 16; i++)
             {
                 printf(" %02X", AppSKey[i]);
@@ -1247,7 +1230,7 @@ PROCESS_THREAD(loramac_process, ev, data)
         {
             if (NvmCtxMgmtStore() == NVMCTXMGMT_STATUS_SUCCESS)
             {
-                printf("\r\n###### ===== CTXS STORED ==== ######\r\n");
+                LOG_INFO("###### ===== CTXS STORED ==== ######\n");
             }
 
             //CRITICAL_SECTION_BEGIN();

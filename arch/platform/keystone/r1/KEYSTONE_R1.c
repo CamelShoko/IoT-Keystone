@@ -590,11 +590,10 @@ const PIN_Config BoardGpioInitTable[] = {
     KEYSTONE_R1_SPI_IMU_CS | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,       /* IMU chip select: deselected */
 
     /* GPIO */
-    //KEYSTONE_R1_PIN_LORA_INT | PIN_INPUT_EN | PIN_PULLDOWN | PIN_IRQ_POSEDGE,                          /* SX1262 INT active high */
-    KEYSTONE_R1_PIN_IMU_INT | PIN_INPUT_EN | PIN_PULLDOWN | PIN_IRQ_POSEDGE,                           /* SX1262 INT active high */
+    KEYSTONE_R1_PIN_IMU_INT | PIN_INPUT_EN | PIN_PULLDOWN | PIN_IRQ_POSEDGE,                           /* IMU INT active high */
     KEYSTONE_R1_PIN_ALS_INT | PIN_INPUT_EN | PIN_IRQ_NEGEDGE,                                          /* OPT3001 light sensor INT open drain active low external 10K pullup*/
     KEYSTONE_R1_PIN_HALL | PIN_INPUT_EN,                                                               /* HALL sensor digital input */
-    KEYSTONE_R1_PIN_FLASH_EN | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MIN,     /* Flash ENABLE output active low: disabled */
+    KEYSTONE_R1_PIN_FLASH_EN | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MIN,      /* Flash ENABLE output active low */
 
 
     /* UART IO */

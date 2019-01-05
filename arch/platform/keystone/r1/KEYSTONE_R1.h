@@ -199,6 +199,12 @@ extern I2C_Handle hI2cSensor;
 #define KEYSTONE_R1_UART_RTS              KEYSTONE_R1_UART0_RTS
 
 #define KEYSTONE_R1_LORA_TXCO_WAKEUP_TIME 0
+/* DIO2 is connected to CHARGE input from the MAX1555 LiPo charger.  
+ * Options here are: true, false */
+#define KEYSTONE_R1_SX126X_SetDio2AsRfSwitchCtrl false
+
+#define KEYSTONE_R1_SX1262_TX_POWER_LIMIT   8 /* dBm MAXIMUM power the SX1262 can be programmed with 
+                                               * in order to function. Set 0 to disable limit. */
 
 /*!
  *  @brief  Initialize the general board specific settings

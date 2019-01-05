@@ -75,6 +75,18 @@
 #include "lora-radio.h"
 #include "LoRaMacTypes.h"
 
+
+ /*!
+ * Set to 1 or 0.  When set to 1, only the appropriate channels in each region
+ * (e.g. channels 8-15 in US915) will be utilized for
+ * compatibility with The Things Network gateways.
+ */
+#ifdef LORA_CONF_REGION_THINGS_NETWORK
+#define LORA_REGION_THINGS_NETWORK                         LORA_CONF_REGION_THINGS_NETWORK
+#else
+#define LORA_REGION_THINGS_NETWORK                         0
+
+#endif
 /*!
  * Maximum number of times the MAC layer tries to get an acknowledge.
  */

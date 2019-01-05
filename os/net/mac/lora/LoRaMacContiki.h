@@ -59,6 +59,13 @@ typedef enum
     SendStatus_FAILED
 } SendStatus_t;
 
+typedef enum
+{
+    EventType_NONE,
+    EventType_JOINED,
+    EventType_MAX
+} EventType_t;
+
 /* Event posted to user process when join is complete. */
 extern process_event_t lora_op_complete_event;
 

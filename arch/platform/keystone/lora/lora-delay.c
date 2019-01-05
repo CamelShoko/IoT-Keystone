@@ -21,6 +21,7 @@
  * \author    Gregory Cristian ( Semtech )
  */
 #include "lora-delay.h"
+#include <ti/drivers/dpl/ClockP.h>
 
 void Delay( float s )
 {
@@ -29,5 +30,6 @@ void Delay( float s )
 
 void DelayMs( uint32_t ms )
 {
-    /* @ TODO Use ClockP_delay */
+    /* We have no choice but to use a blocking delay here. */
+    ClockP_usleep(ms * 1000);
 }

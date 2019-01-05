@@ -48,6 +48,13 @@
 
 #include "LoRaMac.h"
 
+ /*---------------------------------------------------------------------------*/
+ /* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "LoRaMac"
+#define LOG_LEVEL LOG_LEVEL_LORA
+ /*---------------------------------------------------------------------------*/
+
 /*!
  * Maximum PHY layer payload size
  */
@@ -2566,6 +2573,9 @@ LoRaMacStatus_t SendFrameOnChannel( uint8_t channel )
     txConfig.MaxEirp = MacCtx.NvmCtx->MacParams.MaxEirp;
     txConfig.AntennaGain = MacCtx.NvmCtx->MacParams.AntennaGain;
     txConfig.PktLen = MacCtx.PktBufferLen;
+
+    LOG_DBG("SendFrameOnChannel %d, datarate=%d txpwr=%d pktlen=%d\n",
+        channel, txConfig.Datarate, txConfig.TxPower, txConfig.PktLen);
 
 
     if( LoRaMacClassBIsBeaconExpected( ) == true )

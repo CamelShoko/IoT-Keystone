@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, This. Is. IoT. - https://thisisiot.io
+* Copyright (c) 2018, THIS. IS. IoT. - https://thisisiot.io
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -62,6 +62,51 @@
 #include <ti/drivers/pin/PINCC26XX.h>
 #include <ti/drivers/SPI.h>
 
+#include <ti/drivers/dpl/ClockP.h>
+
+ /*---------------------------------------------------------------------------*/
+ /* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "sx126x-brd"
+#define LOG_LEVEL LOG_LEVEL_LORA
+ /*---------------------------------------------------------------------------*/
+
+// #define REGISTER_READBACK
+
+#ifdef REGISTER_READBACK
+#include <string.h>
+uint8_t* reg_readback_alloc(int size) 
+{
+    uint8_t* rdbuf = (uint8_t*)malloc(size);
+    memset(rdbuf, 0, size);
+    return rdbuf;
+}
+
+void reg_readback_cmp(uint8_t* wrbuf, uint8_t* rdbuf, int size)
+{
+    if (memcmp(rdbuf, wrbuf, size) == 0) {
+        printf("register readback ok\n");
+    }
+    else {
+        int i;
+        printf("register readback failed!\n");
+        printf("sent:");
+        for (i = 0; i < size; i++) {
+            printf(" %02x", wrbuf[i]);
+        }
+        printf("\ngot:");
+        for (i = 0; i < size; i++) {
+            printf(" %02x", rdbuf[i]);
+        }
+        printf("\n");
+    }
+}
+
+#endif
+
+
+
+ /*---------------------------------------------------------------------------*/
 
 /* PIN driver handle */
 static PIN_Handle hRadioPins;
@@ -79,6 +124,14 @@ static PIN_State pinState;
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 1); /* De-assert CS */        \
 } while(0)
 
+/* SX1262 datasheet suggests up to 100 us delay may be required before
+ * activating clock after pulling CS low.
+ */
+#define CS_DELAY() do {  \
+    ClockP_usleep(100);  \
+} while(0)
+
+
 /*!
  * Debug GPIO pins objects
  */
@@ -86,6 +139,34 @@ static PIN_State pinState;
 Gpio_t DbgPinTx;
 Gpio_t DbgPinRx;
 #endif
+
+/* Records status from most SPI transactions */
+RadioStatus_t SX1262RadioStatus;
+
+/* Strings for all cases in the 3-bit CmdStatus field */
+const char* CommandStatusStrings[] =
+{
+    "Reserved", 
+    "RFU",    
+    "Data available",  
+    "Timeout",    
+    "Processing error",   
+    "Failure to execute",   
+    "TX done",
+    "Unknown", 
+};
+
+const char* ChipModeStrings[] =
+{
+    "Unused",
+    "RFU",
+    "STBY_RC",
+    "STBY_XOSC",
+    "FS",
+    "RX",
+    "TX",
+    "Unknown",
+};
 
 void SX126xIoInit( void )
 {
@@ -152,35 +233,53 @@ uint32_t SX126xGetBoardTcxoWakeupTime( void )
 
 void SX126xReset( void )
 {
-    DelayMs( 10 );
-    //GpioInit( &SX126x.Reset, RADIO_RESET, PIN_OUTPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
+/*
+    8.1 Reset
+    A complete “factory reset” of the chip can be issued on request by toggling pin 15 NRESET of the SX1261/2. It will be
+    automatically followed by the standard calibration procedure and any previous context will be lost. The pin should be held
+    low for more than 50 us (typically 100 us) for the Reset to happen.
+*/
     PINCC26XX_setOutputValue(Board_PIN_LORA_RST, 0); /* Assert reset */
-    DelayMs( 20 );
-    //GpioInit( &SX126x.Reset, RADIO_RESET, PIN_ANALOGIC, PIN_PUSH_PULL, PIN_NO_PULL, 0 ); // internal pull-up
+    DelayMs( 1 );
     PINCC26XX_setOutputValue(Board_PIN_LORA_RST, 1); /* De-assert reset */
-
-    DelayMs( 10 );
+    
+    /* POR time to busy low is typically 3.5 ms */
+    DelayMs( 5 );
 }
 
 void SX126xWaitOnBusy( void )
 {
-    while( PINCC26XX_getInputValue(Board_PIN_LORA_BUSY ) == 1 );
+    while (PINCC26XX_getInputValue(Board_PIN_LORA_BUSY) == 1) {
+        LOG_DBG("Waiting LORA_BUSY...\n");
+    }
 }
 
 void SX126xWakeup( void )
 {
-    CRITICAL_SECTION_BEGIN( );
+    //CRITICAL_SECTION_BEGIN( );
+/*
+    9.3 Sleep Mode
+    In this mode, most of the radio internal blocks are powered down or in low power mode and optionally the RC64k clock
+    and the timer are running.The chip may enter this mode from STDBY_RC and can leave the SLEEP mode if one of the
+    following events occurs :
+    * NSS pin goes low in any case
+    * RTC timer generates an End - Of - Count(corresponding to Listen mode)
+    When the radio is in Sleep mode, the BUSY pin is held high.
+*/
 
     SPI_Transaction spiTransaction;
     uint8_t         transmitBuffer[2] = { RADIO_GET_STATUS, 0x00 };
-    
+    uint8_t         statusBuffer[2] = { 0 };
     //GpioWrite( &SX126x.Spi.Nss, 0 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 0); /* Assert CS */
+
+    CS_DELAY();
 
     //SpiInOut( &SX126x.Spi, RADIO_GET_STATUS );
     //SpiInOut( &SX126x.Spi, 0x00 );
     spiTransaction.count = sizeof(transmitBuffer);
     spiTransaction.txBuf = (void*)transmitBuffer;
+    spiTransaction.rxBuf = (void*)statusBuffer;
     SPI_transfer(hSpiInternal, &spiTransaction);
 
     //GpioWrite( &SX126x.Spi.Nss, 1 );
@@ -189,7 +288,14 @@ void SX126xWakeup( void )
     // Wait for chip to be ready.
     SX126xWaitOnBusy( );
 
-    CRITICAL_SECTION_END( );
+    //CRITICAL_SECTION_END( );
+
+    SX1262RadioStatus = (RadioStatus_t)statusBuffer[1];
+#if 1
+    LOG_DBG("SX126xWakeup done : mode=%s status=%s\n",
+        ChipModeStrings[SX1262RadioStatus.Fields.ChipMode],
+        CommandStatusStrings[SX1262RadioStatus.Fields.CmdStatus]);
+#endif
 }
 
 void SX126xWriteCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size )
@@ -198,6 +304,9 @@ void SX126xWriteCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size
 
     //GpioWrite( &SX126x.Spi.Nss, 0 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 0); /* Assert CS */
+
+    CS_DELAY();
+
 #if 0
     SpiInOut( &SX126x.Spi, ( uint8_t )command );
 
@@ -207,7 +316,7 @@ void SX126xWriteCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size
     }
 #endif
     SPI_Transaction spiTransaction;                                                 
-    uint8_t         transmitBuffer[] = { command };
+    uint8_t         transmitBuffer[1] = { command };
     spiTransaction.count = sizeof(transmitBuffer);                              
     spiTransaction.txBuf = (void*)transmitBuffer; 
     spiTransaction.rxBuf = NULL;
@@ -215,6 +324,7 @@ void SX126xWriteCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size
 
     spiTransaction.count = size;
     spiTransaction.txBuf = (void*)buffer;
+    spiTransaction.rxBuf = NULL;
     SPI_transfer(hSpiInternal, &spiTransaction);
 
 
@@ -225,6 +335,9 @@ void SX126xWriteCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size
     {
         SX126xWaitOnBusy( );
     }
+
+    LOG_DBG("SX126xWriteCommand cmd=%02x size=%d done\n",
+        command, size);
 }
 
 void SX126xReadCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size )
@@ -233,6 +346,7 @@ void SX126xReadCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size 
 
     //GpioWrite( &SX126x.Spi.Nss, 0 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 0); /* Assert CS */
+    CS_DELAY();
 
 #if 0
     SpiInOut( &SX126x.Spi, ( uint8_t )command );
@@ -244,7 +358,7 @@ void SX126xReadCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size 
 #endif
 
     SPI_Transaction spiTransaction;
-    uint8_t         transmitBuffer[] = { command };
+    uint8_t         transmitBuffer[] = { command, 0 };
     spiTransaction.count = sizeof(transmitBuffer);
     spiTransaction.txBuf = (void*)transmitBuffer;
     spiTransaction.rxBuf = NULL;
@@ -259,6 +373,9 @@ void SX126xReadCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size 
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 1); /* De-assert CS */
 
     SX126xWaitOnBusy( );
+
+    LOG_DBG("SX126xReadCommand cmd=%02x size=%d done\n",
+        command, size);
 }
 
 void SX126xWriteRegisters( uint16_t address, uint8_t *buffer, uint16_t size )
@@ -267,6 +384,8 @@ void SX126xWriteRegisters( uint16_t address, uint8_t *buffer, uint16_t size )
 
     //GpioWrite( &SX126x.Spi.Nss, 0 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 0); /* Assert CS */
+    CS_DELAY();
+
 #if 0
     SpiInOut( &SX126x.Spi, RADIO_WRITE_REGISTER );
     SpiInOut( &SX126x.Spi, ( address & 0xFF00 ) >> 8 );
@@ -279,20 +398,34 @@ void SX126xWriteRegisters( uint16_t address, uint8_t *buffer, uint16_t size )
 #endif
 
     SPI_Transaction spiTransaction;
-    uint8_t         transmitBuffer[] = { RADIO_WRITE_REGISTER,  (address & 0xFF00) >> 8 , address & 0x00FF };
+    uint8_t         transmitBuffer[3] = { RADIO_WRITE_REGISTER,  (address & 0xFF00) >> 8 , address & 0x00FF };
+    uint8_t         statusBuffer[3] = { 0 };
     spiTransaction.count = sizeof(transmitBuffer);
     spiTransaction.txBuf = (void*)transmitBuffer;
-    spiTransaction.rxBuf = NULL;
+    spiTransaction.rxBuf = (void*)statusBuffer;
     SPI_transfer(hSpiInternal, &spiTransaction);
 
     spiTransaction.count = size;
     spiTransaction.txBuf = (void*)buffer;
+    spiTransaction.rxBuf = NULL;
     SPI_transfer(hSpiInternal, &spiTransaction);
 
     //GpioWrite( &SX126x.Spi.Nss, 1 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 1); /* De-assert CS */
 
     SX126xWaitOnBusy( );
+
+#ifdef REGISTER_READBACK
+    uint8_t* rdbuf = reg_readback_alloc(size);
+    SX126xReadRegisters(address, rdbuf, size);
+    reg_readback_cmp(buffer, rdbuf, size);
+    free(rdbuf);
+#endif
+
+    SX1262RadioStatus = (RadioStatus_t)statusBuffer[1];
+    LOG_DBG("SX126xWriteRegisters addr=%04x size=%d buf[0]=0x%02x done : %s\n",
+        address, size, buffer[0],
+        CommandStatusStrings[SX1262RadioStatus.Fields.CmdStatus]);
 }
 
 void SX126xWriteRegister( uint16_t address, uint8_t value )
@@ -306,6 +439,7 @@ void SX126xReadRegisters( uint16_t address, uint8_t *buffer, uint16_t size )
 
     //GpioWrite( &SX126x.Spi.Nss, 0 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 0); /* Assert CS */
+    CS_DELAY();
 
 #if 0
     SpiInOut( &SX126x.Spi, RADIO_READ_REGISTER );
@@ -322,10 +456,11 @@ void SX126xReadRegisters( uint16_t address, uint8_t *buffer, uint16_t size )
     /* Note host has to send NOP byte (0) after last address byte 
      * before receiving data (datasheet 13.2.2 ReadRegister Function) 
      */
-    uint8_t transmitBuffer[] = { RADIO_READ_REGISTER,  (address & 0xFF00) >> 8, address & 0x00FF, 0 };
+    uint8_t transmitBuffer[4] = { RADIO_READ_REGISTER,  (address & 0xFF00) >> 8, address & 0x00FF, 0 };
+    uint8_t statusBuffer[4] = { 0 };
     spiTransaction.count = sizeof(transmitBuffer);
     spiTransaction.txBuf = (void*)transmitBuffer;
-    spiTransaction.rxBuf = NULL;
+    spiTransaction.rxBuf = (void*)statusBuffer;
     SPI_transfer(hSpiInternal, &spiTransaction);
 
     spiTransaction.count = size;
@@ -337,6 +472,12 @@ void SX126xReadRegisters( uint16_t address, uint8_t *buffer, uint16_t size )
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 1); /* De-assert CS */
 
     SX126xWaitOnBusy( );
+
+    SX1262RadioStatus = (RadioStatus_t)statusBuffer[1];
+    LOG_DBG("SX126xReadRegisters addr=%04x size=%d done : %s\n", 
+        address, size,
+        CommandStatusStrings[SX1262RadioStatus.Fields.CmdStatus]);
+
 }
 
 uint8_t SX126xReadRegister( uint16_t address )
@@ -352,6 +493,7 @@ void SX126xWriteBuffer( uint8_t offset, uint8_t *buffer, uint8_t size )
 
     //GpioWrite( &SX126x.Spi.Nss, 0 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 0); /* Assert CS */
+    CS_DELAY();
 
 #if 0
     SpiInOut( &SX126x.Spi, RADIO_WRITE_BUFFER );
@@ -363,20 +505,40 @@ void SX126xWriteBuffer( uint8_t offset, uint8_t *buffer, uint8_t size )
 #endif
 
     SPI_Transaction spiTransaction;
-    uint8_t         transmitBuffer[] = { RADIO_WRITE_BUFFER,  offset };
+    uint8_t         transmitBuffer[2] = { RADIO_WRITE_BUFFER,  offset };
+    uint8_t         statusBuffer[2] = { 0 };
     spiTransaction.count = sizeof(transmitBuffer);
     spiTransaction.txBuf = (void*)transmitBuffer;
-    spiTransaction.rxBuf = NULL;
+    spiTransaction.rxBuf = (void*)statusBuffer;
     SPI_transfer(hSpiInternal, &spiTransaction);
 
     spiTransaction.count = size;
     spiTransaction.txBuf = (void*)buffer;
+    spiTransaction.rxBuf = NULL;
     SPI_transfer(hSpiInternal, &spiTransaction);
 
     //GpioWrite( &SX126x.Spi.Nss, 1 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 1); /* De-assert CS */
 
     SX126xWaitOnBusy( );
+
+#ifdef REGISTER_READBACK
+    uint8_t* rdbuf = reg_readback_alloc(size);
+    SX126xReadBuffer(offset, rdbuf, size);
+    reg_readback_cmp(buffer, rdbuf, size);
+    free(rdbuf);
+#endif
+
+    SX1262RadioStatus = (RadioStatus_t)statusBuffer[1];
+#if 0
+    LOG_DBG("SX126xWriteBuffer (cmd=0e) offset=%d size=%d done : %s",
+        offset, size,
+        CommandStatusStrings[SX1262RadioStatus.Fields.CmdStatus]);
+    for (int i = 0; i < size; i++) {
+        printf(" %02x", buffer[i]);
+    }
+    printf("\n");
+#endif
 }
 
 void SX126xReadBuffer( uint8_t offset, uint8_t *buffer, uint8_t size )
@@ -385,6 +547,7 @@ void SX126xReadBuffer( uint8_t offset, uint8_t *buffer, uint8_t size )
 
     //GpioWrite( &SX126x.Spi.Nss, 0 );
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 0); /* Assert CS */
+    CS_DELAY();
 
 #if 0
     SpiInOut( &SX126x.Spi, RADIO_READ_BUFFER );
@@ -397,12 +560,13 @@ void SX126xReadBuffer( uint8_t offset, uint8_t *buffer, uint8_t size )
 #endif
     SPI_Transaction spiTransaction;
     /* Note host has to send NOP byte (0) after last address byte
-    * before receiving data (datasheet 13.2.2 ReadRegister Function)
+    * before receiving data (datasheet 13.2.4 ReadBuffer Function)
     */
-    uint8_t transmitBuffer[] = { RADIO_READ_REGISTER,  offset, 0 };
+    uint8_t transmitBuffer[3] = { RADIO_READ_BUFFER,  offset, 0 };
+    uint8_t statusBuffer[3] = { 0 };
     spiTransaction.count = sizeof(transmitBuffer);
     spiTransaction.txBuf = (void*)transmitBuffer;
-    spiTransaction.rxBuf = NULL;
+    spiTransaction.rxBuf = (void*)statusBuffer;
     SPI_transfer(hSpiInternal, &spiTransaction);
 
     spiTransaction.count = size;
@@ -414,6 +578,13 @@ void SX126xReadBuffer( uint8_t offset, uint8_t *buffer, uint8_t size )
     PINCC26XX_setOutputValue(Board_SPI_LORA_CS, 1); /* De-assert CS */
 
     SX126xWaitOnBusy( );
+
+    SX1262RadioStatus = (RadioStatus_t)statusBuffer[1];
+#if 1
+    LOG_DBG("SX126xReadBuffer offset=%d size=%d done : %s\n",
+        offset, size,
+        CommandStatusStrings[SX1262RadioStatus.Fields.CmdStatus]);
+#endif
 }
 
 void SX126xSetRfTxPower( int8_t power )

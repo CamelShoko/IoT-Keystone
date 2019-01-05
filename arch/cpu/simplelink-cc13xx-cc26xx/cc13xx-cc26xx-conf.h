@@ -165,7 +165,9 @@
 #if (RF_MODE == RF_MODE_SUB_1_GHZ) && (SUPPORTS_PROP_MODE)
 
 /* Netstack configuration. */
+#ifndef NETSTACK_CONF_RADIO
 #define NETSTACK_CONF_RADIO         prop_mode_driver
+#endif
 
 /* CSMA configuration. */
 #define CSMA_CONF_ACK_WAIT_TIME                (RTIMER_SECOND / 300)
@@ -176,7 +178,9 @@
 #elif (RF_MODE == RF_MODE_2_4_GHZ) && (SUPPORTS_IEEE_MODE)
 
 /* Netstack configuration. */
+#ifndef NETSTACK_CONF_RADIO
 #define NETSTACK_CONF_RADIO         ieee_mode_driver
+#endif
 
 /* CSMA configuration. */
 #define CSMA_CONF_SEND_SOFT_ACK     0
@@ -199,7 +203,9 @@
 #if (RF_MODE == RF_MODE_2_4_GHZ) && (SUPPORTS_IEEE_MODE)
 
 /* Netstack configuration */
+#ifndef NETSTACK_CONF_RADIO
 #define NETSTACK_CONF_RADIO         ieee_mode_driver
+#endif
 
 /* CSMA configuration */
 #define CSMA_CONF_SEND_SOFT_ACK     0

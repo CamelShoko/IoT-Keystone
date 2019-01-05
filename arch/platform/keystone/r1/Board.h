@@ -161,7 +161,12 @@ extern "C" {
 
 #define Board_WATCHDOG0         KEYSTONE_R1_WATCHDOG0
 
+/* LoRa settings */
 #define BOARD_LORA_TXCO_WAKEUP_TIME KEYSTONE_R1_LORA_TXCO_WAKEUP_TIME 
+#define Board_SX126X_SetDio2AsRfSwitchCtrl  KEYSTONE_R1_SX126X_SetDio2AsRfSwitchCtrl
+
+#define Board_SX1262_TX_POWER_LIMIT KEYSTONE_R1_SX1262_TX_POWER_LIMIT
+
 
 /* Board specific I2C addresses */
 #define Board_OPT3001_ADDR      (0x44)

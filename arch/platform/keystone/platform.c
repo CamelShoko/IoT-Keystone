@@ -171,7 +171,7 @@ set_rf_params(void)
  * Open the SPI instance as a master to manage all traffic on the specified bus.
  */
 static void
-spi_open(uint8_t index, SPI_Handle* hInst, uint32_t bitRate)
+spi_open(uint8_t index, SPI_Handle* hInst, uint32_t bitRate, SPI_FrameFormat format)
 {
     SPI_Params spi_params;
 
@@ -189,12 +189,7 @@ spi_open(uint8_t index, SPI_Handle* hInst, uint32_t bitRate)
     spi_params.mode = SPI_MASTER;
     spi_params.bitRate = bitRate;
     spi_params.dataSize = 8;
-    /*!NOTICE!
-     *  ICM-20948 requires SPI MODE 3 (POL=1, PHA=1) to function.
-     *  BME-280 supports either MODE 0 or MODE 3.
-     *  Therefore, we can set the bus to mode 3.
-     */
-    spi_params.frameFormat = SPI_POL1_PHA1;
+    spi_params.frameFormat = format;
 
     /*
     * Try to open the SPI driver. Accessing the SPI driver also ensures
@@ -268,8 +263,16 @@ platform_init_stage_one(void)
 #endif
 #if TI_SPI_CONF_ENABLE
   SPI_init();
-  spi_open(0, &hSpiInternal, 16000000); /* max speed SX1262=16MHz*/
-  spi_open(1, &hSpiSensor, 4000000); /* max speed ICM20948=7MHz */
+
+  /* SX1262 is a MODE 0 device. */
+  spi_open(0, &hSpiInternal, 4000000, SPI_POL0_PHA0); /* max speed SX1262=16MHz*/
+
+    /*!NOTICE!
+    *  ICM-20948 requires SPI MODE 3 (POL=1, PHA=1) to function.
+    *  BME-280 supports either MODE 0 or MODE 3.
+    *  Therefore, we can set the bus to mode 3.
+    */
+  spi_open(1, &hSpiSensor, 4000000, SPI_POL1_PHA1); /* max speed ICM20948=7MHz */
   if (hSpiInternal == NULL || hSpiSensor == NULL) {
       /*
       * Something is seriously wrong if SPI initialization fails.

@@ -29,6 +29,13 @@
 #include "sx126x.h"
 #include "sx126x-board.h"
 
+ /*---------------------------------------------------------------------------*/
+ /* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "sx126x"
+#define LOG_LEVEL LOG_LEVEL_LORA
+ /*---------------------------------------------------------------------------*/
+
 /*!
  * \brief Radio registers definition
  */
@@ -89,6 +96,7 @@ void SX126xInit( DioIrqHandler dioIrq )
     SX126xIoIrqInit( dioIrq );
 
     SX126xWakeup( );
+
     SX126xSetStandby( STDBY_RC );
 
 #ifdef USE_TCXO
@@ -99,8 +107,10 @@ void SX126xInit( DioIrqHandler dioIrq )
     SX126xCalibrate( calibParam );
 #endif
 
-    SX126xSetDio2AsRfSwitchCtrl( true );
+    SX126xSetDio2AsRfSwitchCtrl( Board_SX126X_SetDio2AsRfSwitchCtrl );
     SX126xSetOperatingMode( MODE_STDBY_RC );
+
+    SX126xAntSwOn();
 }
 
 RadioOperatingModes_t SX126xGetOperatingMode( void )
@@ -136,6 +146,12 @@ void SX126xCheckDeviceReady( void )
     if( ( SX126xGetOperatingMode( ) == MODE_SLEEP ) || ( SX126xGetOperatingMode( ) == MODE_RX_DC ) )
     {
         SX126xWakeup( );
+
+        /* Now that it is woken up, set the operating mode to prevent going through this
+         * process repeatedly.
+         */
+        SX126xSetOperatingMode(MODE_STDBY_RC);
+
         // Switch is turned off when device is in sleep mode and turned on is all other modes
         SX126xAntSwOn( );
     }
@@ -244,6 +260,8 @@ uint32_t SX126xGetRandom( void )
 
 void SX126xSetSleep( SleepParams_t sleepConfig )
 {
+    LOG_DBG("SX126xSetSleep: config:%d\n", sleepConfig.Value);
+
     SX126xAntSwOff( );
 
     SX126xWriteCommand( RADIO_SET_SLEEP, &sleepConfig.Value, 1 );
@@ -252,6 +270,8 @@ void SX126xSetSleep( SleepParams_t sleepConfig )
 
 void SX126xSetStandby( RadioStandbyModes_t standbyConfig )
 {
+    LOG_DBG("SX126xSetStandby: config:%d\n", standbyConfig);
+
     SX126xWriteCommand( RADIO_SET_STANDBY, ( uint8_t* )&standbyConfig, 1 );
     if( standbyConfig == STDBY_RC )
     {
@@ -265,12 +285,21 @@ void SX126xSetStandby( RadioStandbyModes_t standbyConfig )
 
 void SX126xSetFs( void )
 {
+    /* 8.3.1 BUSY Control Line
+       In FS, BUSY will go low when the PLL is locked.
+    */
     SX126xWriteCommand( RADIO_SET_FS, 0, 0 );
     SX126xSetOperatingMode( MODE_FS );
 }
 
 void SX126xSetTx( uint32_t timeout )
 {
+    /* 8.3.1 BUSY Control Line
+       In TX, BUSY will go low when the PA has ramped-up and transmission of preamble starts. 
+    */
+    LOG_DBG("SX126xSetTx : timeout=%lu\n",
+        timeout);
+
     uint8_t buf[3];
 
     SX126xSetOperatingMode( MODE_TX );
@@ -279,10 +308,23 @@ void SX126xSetTx( uint32_t timeout )
     buf[1] = ( uint8_t )( ( timeout >> 8 ) & 0xFF );
     buf[2] = ( uint8_t )( timeout & 0xFF );
     SX126xWriteCommand( RADIO_SET_TX, buf, 3 );
+
+#if 0
+    RadioStatus_t status = SX126xGetStatus();
+    LOG_DBG("SX126xSetTx done : mode=%s status=%s\n",
+        ChipModeStrings[status.Fields.ChipMode],
+        CommandStatusStrings[status.Fields.CmdStatus]);
+#endif
 }
 
 void SX126xSetRx( uint32_t timeout )
 {
+    /* 8.3.1 BUSY Control Line
+       In RX, BUSY will go to low as soon as the RX is up and ready to receive data.
+    */
+
+    LOG_DBG("SX126xSetRx: timeout:%lu\n", timeout);
+
     uint8_t buf[3];
 
     SX126xSetOperatingMode( MODE_RX );
@@ -329,6 +371,8 @@ void SX126xSetCad( void )
 
 void SX126xSetTxContinuousWave( void )
 {
+    LOG_DBG("SX126xSetTxContinuousWave\n");
+
     SX126xWriteCommand( RADIO_SET_TXCONTINUOUSWAVE, 0, 0 );
 }
 
@@ -349,16 +393,22 @@ void SX126xSetLoRaSymbNumTimeout( uint8_t SymbNum )
 
 void SX126xSetRegulatorMode( RadioRegulatorMode_t mode )
 {
+    LOG_DBG("SX126xSetRegulatorMode: mode:%d\n", mode);
+
     SX126xWriteCommand( RADIO_SET_REGULATORMODE, ( uint8_t* )&mode, 1 );
 }
 
 void SX126xCalibrate( CalibrationParams_t calibParam )
 {
+    LOG_DBG("SX126xCalibrate: param:%02x\n", calibParam.Value);
+
     SX126xWriteCommand( RADIO_CALIBRATE, ( uint8_t* )&calibParam, 1 );
 }
 
 void SX126xCalibrateImage( uint32_t freq )
 {
+    LOG_DBG("SX126xCalibrateImage: freq:%lu\n", freq);
+
     uint8_t calFreq[2];
 
     if( freq > 900000000 )
@@ -391,6 +441,9 @@ void SX126xCalibrateImage( uint32_t freq )
 
 void SX126xSetPaConfig( uint8_t paDutyCycle, uint8_t hpMax, uint8_t deviceSel, uint8_t paLut )
 {
+    LOG_DBG("SX126xSetPaConfig: paDutyCycle:%d, hpMax:%d, deviceSel:%d, paLut:%d\n",
+        paDutyCycle, hpMax, deviceSel, paLut);
+
     uint8_t buf[4];
 
     buf[0] = paDutyCycle;
@@ -407,6 +460,9 @@ void SX126xSetRxTxFallbackMode( uint8_t fallbackMode )
 
 void SX126xSetDioIrqParams( uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask )
 {
+    LOG_DBG("SX126xSetDioIrqParams: irqmask:%04x, dio1mask:%04x, dio2mask:%04x, dio3mask:%04x\n",
+        irqMask, dio1Mask, dio2Mask, dio3Mask);
+
     uint8_t buf[8];
 
     buf[0] = ( uint8_t )( ( irqMask >> 8 ) & 0x00FF );
@@ -447,6 +503,8 @@ void SX126xSetDio3AsTcxoCtrl( RadioTcxoCtrlVoltage_t tcxoVoltage, uint32_t timeo
 
 void SX126xSetRfFrequency( uint32_t frequency )
 {
+    LOG_DBG("SX126xSetRfFrequency: freq:%lu\n", frequency);
+
     uint8_t buf[4];
     uint32_t freq = 0;
 
@@ -466,6 +524,8 @@ void SX126xSetRfFrequency( uint32_t frequency )
 
 void SX126xSetPacketType( RadioPacketTypes_t packetType )
 {
+    LOG_DBG("SX126xSetPacketType: type:%d\n", packetType);
+
     // Save packet type internally to avoid questioning the radio
     PacketType = packetType;
     SX126xWriteCommand( RADIO_SET_PACKETTYPE, ( uint8_t* )&packetType, 1 );
@@ -478,6 +538,37 @@ RadioPacketTypes_t SX126xGetPacketType( void )
 
 void SX126xSetTxParams( int8_t power, RadioRampTimes_t rampTime )
 {
+/*
+The output power is defined as power in dBm in a range of
+ - 17 (0xEF) to +14 (0x0E) dBm by step of 1 dB if low power PA is selected
+ - 9 (0xF7) to +22 (0x16) dBm by step of 1 dB if high power PA is selected
+
+ Table 13-41: RampTime Definition
+ RampTime Value RampTime (us)
+ SET_RAMP_10U 0x00 10
+ SET_RAMP_20U 0x01 20
+ SET_RAMP_ 40U 0x02 40
+ SET_RAMP_80U 0x03 80
+ SET_RAMP_200U 0x04 200
+ SET_RAMP_800U 0x05 800
+ SET_RAMP_1700U 0x06 1700
+ SET_RAMP_3400U 0x07 3400
+*/
+#if Board_SX1262_TX_POWER_LIMIT
+    if (power > Board_SX1262_TX_POWER_LIMIT) {
+        power = Board_SX1262_TX_POWER_LIMIT;
+        LOG_DBG("SX126xSetTxParams: power(limited):%d, rampTime:%d\n",
+            power, rampTime);
+    }
+    else {
+        LOG_DBG("SX126xSetTxParams: power:%d, rampTime:%d\n",
+            power, rampTime);
+    }
+#else
+    LOG_DBG("SX126xSetTxParams: power:%d, rampTime:%d\n",
+        power, rampTime);
+#endif
+
     uint8_t buf[2];
 
     if( SX126xGetDeviceId( ) == SX1261 )
@@ -520,6 +611,13 @@ void SX126xSetTxParams( int8_t power, RadioRampTimes_t rampTime )
 
 void SX126xSetModulationParams( ModulationParams_t *modulationParams )
 {
+    LOG_DBG("SX126xSetModulationParams: type:%d, sf:%d, bw:%d, cr:%d, ldro:%d\n",
+        modulationParams->PacketType,
+        modulationParams->Params.LoRa.SpreadingFactor,
+        modulationParams->Params.LoRa.Bandwidth,
+        modulationParams->Params.LoRa.CodingRate,
+        modulationParams->Params.LoRa.LowDatarateOptimize);
+
     uint8_t n;
     uint32_t tempVal = 0;
     uint8_t buf[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -565,6 +663,14 @@ void SX126xSetModulationParams( ModulationParams_t *modulationParams )
 
 void SX126xSetPacketParams( PacketParams_t *packetParams )
 {
+    LOG_DBG("SX126xSetPacketParams: type:%d, preamblelen:%d, hdrtype:%d, payloadlen:%d, crcmode:%d, invertiq:%d\n",
+        packetParams->PacketType,
+        packetParams->Params.LoRa.PreambleLength,
+        packetParams->Params.LoRa.HeaderType,
+        packetParams->Params.LoRa.PayloadLength,
+        packetParams->Params.LoRa.CrcMode,
+        packetParams->Params.LoRa.InvertIQ);
+
     uint8_t n;
     uint8_t crcVal = 0;
     uint8_t buf[9] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -653,6 +759,11 @@ RadioStatus_t SX126xGetStatus( void )
 
     SX126xReadCommand( RADIO_GET_STATUS, ( uint8_t * )&stat, 1 );
     status.Value = stat;
+
+    LOG_DBG("SX126xGetStatus done : mode=%s status=%s\n",
+        ChipModeStrings[status.Fields.ChipMode],
+        CommandStatusStrings[status.Fields.CmdStatus]);
+
     return status;
 }
 
@@ -663,6 +774,7 @@ int8_t SX126xGetRssiInst( void )
 
     SX126xReadCommand( RADIO_GET_RSSIINST, buf, 1 );
     rssi = -buf[0] >> 1;
+    LOG_DBG("SX126xGetRssiInst: done, rssi:%d\n", rssi);
     return rssi;
 }
 
@@ -723,6 +835,9 @@ RadioError_t SX126xGetDeviceErrors( void )
     RadioError_t error;
 
     SX126xReadCommand( RADIO_GET_ERROR, ( uint8_t * )&error, 2 );
+
+    LOG_DBG("SX126xGetDeviceErrors: done, error:%04x\n", error.Value);
+
     return error;
 }
 

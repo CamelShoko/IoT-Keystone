@@ -31,6 +31,13 @@
 #include "sx126x-board.h"
 #include "os/net/mac/lora/LoRaMacContiki.h"
 
+ /*---------------------------------------------------------------------------*/
+ /* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "LoRa-Radio"
+#define LOG_LEVEL LOG_LEVEL_LORA
+ /*---------------------------------------------------------------------------*/
+
 /*!
  * \brief Initializes the radio
  *
@@ -302,6 +309,11 @@ uint32_t RadioGetWakeupTime( void );
 void RadioIrqProcess( void );
 
 /*!
+* \brief Process radio events from timers and irq
+*/
+void RadioEventProcess(void);
+
+/*!
  * \brief Sets the radio in reception mode with Max LNA gain for the given time
  * \param [IN] timeout Reception timeout [ms]
  *                     [0: continuous, others timeout]
@@ -345,7 +357,8 @@ const struct Radio_s Radio =
     RadioSetMaxPayloadLength,
     RadioSetPublicNetwork,
     RadioGetWakeupTime,
-    RadioIrqProcess,
+    //RadioIrqProcess,
+    RadioEventProcess,
     // Available on SX126x only
     RadioRxBoosted,
     RadioSetRxDutyCycle
@@ -499,6 +512,8 @@ void RadioInit( RadioEvents_t *events )
 {
     RadioEvents = events;
 
+    LOG_DBG("RadioInit started.\n");
+
     SX126xInit( RadioOnDioIrq );
     SX126xSetStandby( STDBY_RC );
     SX126xSetRegulatorMode( USE_DCDC );
@@ -510,6 +525,8 @@ void RadioInit( RadioEvents_t *events )
     // Initialize driver timeout timers
     TimerInit( &TxTimeoutTimer, RadioOnTxTimeoutIrq );
     TimerInit( &RxTimeoutTimer, RadioOnRxTimeoutIrq );
+
+    LOG_DBG("RadioInit completed.\n");
 
     IrqFired = false;
 }
@@ -590,6 +607,7 @@ bool RadioIsChannelFree( RadioModems_t modem, uint32_t freq, int16_t rssiThresh,
 
 uint32_t RadioRandom( void )
 {
+    LOG_DBG("RadioRandom start\n");
     uint8_t i;
     uint32_t rnd = 0;
 
@@ -605,11 +623,21 @@ uint32_t RadioRandom( void )
     for( i = 0; i < 32; i++ )
     {
         DelayMs( 1 );
+
+#if 0
+        RadioStatus_t status = SX126xGetStatus();
+        LOG_DBG("SX126xStatus: mode=%s status=%s\n",
+            ChipModeStrings[status.Fields.ChipMode],
+            CommandStatusStrings[status.Fields.CmdStatus]);
+#endif
+
         // Unfiltered RSSI value reading. Only takes the LSB value
         rnd |= ( ( uint32_t )SX126xGetRssiInst( ) & 0x01 ) << i;
     }
 
     RadioSleep( );
+
+    LOG_DBG("RadioRandom stop\n");
 
     return rnd;
 }
@@ -734,6 +762,18 @@ void RadioSetTxConfig( RadioModems_t modem, int8_t power, uint32_t fdev,
                         bool fixLen, bool crcOn, bool freqHopOn,
                         uint8_t hopPeriod, bool iqInverted, uint32_t timeout )
 {
+    /* modem        Radio modem to be used[0:FSK, 1 : LoRa]
+     * power        Sets the output power[dBm]
+     * bandwidth    Sets the bandwidth(LoRa only)
+     *    LoRa : [0:125 kHz, 1 : 250 kHz, 2 : 500 kHz, 3 : Reserved]
+     * datarate     Sets the Datarate
+     *    LoRa : [6:64, 7 : 128, 8 : 256, 9 : 512,
+     *            10 : 1024, 11 : 2048, 12 : 4096  chips]
+     * coderate     Sets the coding rate(LoRa only)
+     *    LoRa : [1:4 / 5, 2 : 4 / 6, 3 : 4 / 7, 4 : 4 / 8]
+     */
+    LOG_DBG("RadioSetTxConfig: mode:%d power:%d bw:%lu dr:%lu coderate:%d timeout:%lu\n",
+        modem, power, bandwidth, datarate, coderate, timeout);
 
     switch( modem )
     {
@@ -867,10 +907,10 @@ uint32_t RadioTimeOnAir( RadioModems_t modem, uint8_t pktLen )
 
 void RadioSend( uint8_t *buffer, uint8_t size )
 {
-    SX126xSetDioIrqParams( IRQ_TX_DONE | IRQ_RX_TX_TIMEOUT,
-                           IRQ_TX_DONE | IRQ_RX_TX_TIMEOUT,
-                           IRQ_RADIO_NONE,
-                           IRQ_RADIO_NONE );
+    SX126xSetDioIrqParams( IRQ_TX_DONE | IRQ_RX_TX_TIMEOUT, /* IRQ mask */
+                           IRQ_TX_DONE | IRQ_RX_TX_TIMEOUT, /* DIO1 mask */
+                           IRQ_RADIO_NONE, /* DIO2 */
+                           IRQ_RADIO_NONE  /* DIO3 */);
 
     if( SX126xGetPacketType( ) == PACKET_TYPE_LORA )
     {
@@ -969,8 +1009,8 @@ void RadioSetTxContinuousWave( uint32_t freq, int8_t power, uint16_t time )
     SX126xSetRfTxPower( power );
     SX126xSetTxContinuousWave( );
 
-    TimerSetValue( &RxTimeoutTimer, time  * 1e3 );
-    TimerStart( &RxTimeoutTimer );
+    TimerSetValue( &TxTimeoutTimer, time  * 1e3 );
+    TimerStart( &TxTimeoutTimer );
 }
 
 int16_t RadioRssi( RadioModems_t modem )
@@ -1049,20 +1089,23 @@ uint32_t RadioGetWakeupTime( void )
     return SX126xGetBoardTcxoWakeupTime( ) + RADIO_WAKEUP_TIME;
 }
 
+#define TIMER_EVT_FLAG_RX_TIMEOUT       0x1
+#define TIMER_EVT_FLAG_TX_TIMEOUT       0x2
+
+static uint8_t timer_evt_flags = 0;
+
 void RadioOnTxTimeoutIrq( void )
 {
-    if( ( RadioEvents != NULL ) && ( RadioEvents->TxTimeout != NULL ) )
-    {
-        RadioEvents->TxTimeout( );
-    }
+    /* Callback from ctimer, so use process_post instead of poll */
+    timer_evt_flags |= TIMER_EVT_FLAG_TX_TIMEOUT;
+    process_post(&loramac_process, PROCESS_EVENT_POLL, 0);
 }
 
 void RadioOnRxTimeoutIrq( void )
 {
-    if( ( RadioEvents != NULL ) && ( RadioEvents->RxTimeout != NULL ) )
-    {
-        RadioEvents->RxTimeout( );
-    }
+    /* Callback from ctimer, so use process_post instead of poll */
+    timer_evt_flags |= TIMER_EVT_FLAG_RX_TIMEOUT;
+    process_post(&loramac_process, PROCESS_EVENT_POLL, 0);
 }
 
 void RadioOnDioIrq( void )
@@ -1076,6 +1119,45 @@ void RadioOnDioIrq( void )
     process_poll(&loramac_process);
 }
 
+void RadioTimerEventProcess(void)
+{
+    if (timer_evt_flags) {
+        LOG_DBG("Processing timer events=%02x\n", timer_evt_flags);
+        if (timer_evt_flags & TIMER_EVT_FLAG_TX_TIMEOUT) {
+            if ((RadioEvents != NULL) && (RadioEvents->TxTimeout != NULL))
+            {
+                RadioEvents->TxTimeout();
+            }
+        }
+
+        if (timer_evt_flags & TIMER_EVT_FLAG_RX_TIMEOUT) {
+            if ((RadioEvents != NULL) && (RadioEvents->RxTimeout != NULL))
+            {
+                RadioEvents->RxTimeout();
+            }
+        }
+
+        /* Clear all the flags since we've handled them all.
+         * There is no race condition as timer events run in process context.
+         */
+        timer_evt_flags = 0;
+    }
+}
+
+
+/* Handle events that could be from the lora-timer module (ctimer)
+ * or from radio IRQs.  
+ *
+ * All events are handled from the user process context (loramac_process).
+ *
+ * Either of these events could trigger some of the RadioEvent callbacks.
+ */
+void RadioEventProcess(void)
+{
+    RadioIrqProcess();
+    RadioTimerEventProcess();
+}
+
 void RadioIrqProcess( void )
 {
     if( IrqFired == true )
@@ -1087,6 +1169,8 @@ void RadioIrqProcess( void )
 
         uint16_t irqRegs = SX126xGetIrqStatus( );
         SX126xClearIrqStatus( IRQ_RADIO_ALL );
+
+        LOG_DBG("Processing IRQ: status=%04x\n", irqRegs);
 
         if( ( irqRegs & IRQ_TX_DONE ) == IRQ_TX_DONE )
         {
