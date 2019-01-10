@@ -177,8 +177,9 @@ void OnRxTimeout(void)
     State = RX_TIMEOUT;
 }
 
-void OnRxError(void)
+void OnRxError(RadioIrqErrorCode_t code)
 {
+    LOG_ERR("RxError code:%d\n", code);
     Radio.Sleep();
     State = RX_ERROR;
 }
@@ -201,8 +202,16 @@ PROCESS_THREAD(loramac_process, ev, data)
     leds_single_off(LEDS_RED);
 
     LOG_INFO("Starting lora-ping-pong testing app.\n");
+#if Board_SX1262_TX_POWER_LIMIT
+    if (TX_OUTPUT_POWER > Board_SX1262_TX_POWER_LIMIT) {
+        LOG_INFO("TX power (board limited): %d dBm\n", Board_SX1262_TX_POWER_LIMIT);
+    }
+    else
+#endif
+    {
+        LOG_INFO("TX power: %d dBm\n", TX_OUTPUT_POWER);
+    }
     LOG_INFO("Frequency: %d Hz\n", RF_FREQUENCY);
-    LOG_INFO("TX power: %d dBm\n", TX_OUTPUT_POWER);
     LOG_INFO("Spreading factor: SF%d\n", LORA_SPREADING_FACTOR);
     LOG_INFO("Bandwidth: %s kHz\n", LoraBWStrings[LORA_BANDWIDTH]);
     LOG_INFO("Coding rate: %s\n", LoraCRStrings[LORA_CODINGRATE]);
