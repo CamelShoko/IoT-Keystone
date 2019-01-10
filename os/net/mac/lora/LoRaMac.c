@@ -410,7 +410,7 @@ static void OnRadioTxTimeout( void );
 /*!
  * \brief Function executed on Radio Rx error event
  */
-static void OnRadioRxError( void );
+static void OnRadioRxError( RadioIrqErrorCode_t code );
 
 /*!
  * \brief Function executed on Radio Rx Timeout event
@@ -796,7 +796,7 @@ static void OnRadioTxTimeout( void )
     }
 }
 
-static void OnRadioRxError( void )
+static void OnRadioRxError( RadioIrqErrorCode_t code )
 {
     LoRaMacRadioEvents.Events.RxError = 1;
 

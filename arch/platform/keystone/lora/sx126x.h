@@ -143,15 +143,6 @@ typedef union RadioStatus_u
     }Fields;
 }RadioStatus_t;
 
-/*!
- * \brief Structure describing the error codes for callback functions
- */
-typedef enum
-{
-    IRQ_HEADER_ERROR_CODE                   = 0x01,
-    IRQ_SYNCWORD_ERROR_CODE                 = 0x02,
-    IRQ_CRC_ERROR_CODE                      = 0x04,
-}IrqErrorCode_t;
 
 enum IrqPblSyncHeaderCode_t
 {
@@ -701,7 +692,7 @@ typedef struct
     void ( *rxHeaderDone )( bool isOk );            //!< Pointer to a function run on successful Header reception
     void ( *txTimeout )( void );                    //!< Pointer to a function run on transmission timeout
     void ( *rxTimeout )( void );                    //!< Pointer to a function run on reception timeout
-    void ( *rxError )( IrqErrorCode_t errCode );    //!< Pointer to a function run on reception error
+    void ( *rxError )( RadioIrqErrorCode_t errCode );    //!< Pointer to a function run on reception error
     void ( *cadDone )( bool cadFlag );              //!< Pointer to a function run on channel activity detected
 }SX126xCallbacks_t;
 

@@ -414,7 +414,7 @@ static double RadioLoRaSymbTime[3][6] = {{ 32.768, 16.384, 8.192, 4.096, 2.048, 
                                          { 16.384, 8.192,  4.096, 2.048, 1.024, 0.512 },  // 250 KHz
                                          { 8.192,  4.096,  2.048, 1.024, 0.512, 0.256 }}; // 500 KHz
 
-uint8_t MaxPayloadLength = 0xFF;
+uint8_t MaxPayloadLength = LORA_RADIO_MAX_PAYLOAD;
 
 uint32_t TxTimeout = 0;
 uint32_t RxTimeout = 0;
@@ -423,7 +423,7 @@ bool RxContinuous = false;
 
 
 PacketStatus_t RadioPktStatus;
-uint8_t RadioRxPayload[255];
+uint8_t RadioRxPayload[LORA_RADIO_MAX_PAYLOAD];
 
 bool IrqFired = false;
 
@@ -520,7 +520,7 @@ void RadioInit( RadioEvents_t *events )
 
     SX126xSetBufferBaseAddress( 0x00, 0x00 );
     SX126xSetTxParams( 0, RADIO_RAMP_200_US );
-    SX126xSetDioIrqParams( IRQ_RADIO_ALL, IRQ_RADIO_ALL, IRQ_RADIO_NONE, IRQ_RADIO_NONE );
+    SX126xSetDioIrqParams(IRQ_RADIO_NONE, IRQ_RADIO_NONE, IRQ_RADIO_NONE, IRQ_RADIO_NONE );
 
     // Initialize driver timeout timers
     TimerInit( &TxTimeoutTimer, RadioOnTxTimeoutIrq );
@@ -662,7 +662,7 @@ void RadioSetRxConfig( RadioModems_t modem, uint32_t bandwidth,
     }
     else
     {
-        MaxPayloadLength = 0xFF;
+        MaxPayloadLength = LORA_RADIO_MAX_PAYLOAD;
     }
 
     switch( modem )
@@ -944,8 +944,9 @@ void RadioStandby( void )
 
 void RadioRx( uint32_t timeout )
 {
-    SX126xSetDioIrqParams( IRQ_RADIO_ALL, //IRQ_RX_DONE | IRQ_RX_TX_TIMEOUT,
-                           IRQ_RADIO_ALL, //IRQ_RX_DONE | IRQ_RX_TX_TIMEOUT,
+    /* Enable only the events handled in the IRQ handler. */
+    SX126xSetDioIrqParams( IRQ_RX_DONE | IRQ_RX_TX_TIMEOUT | IRQ_HEADER_ERROR | IRQ_CRC_ERROR | IRQ_CAD_DONE,
+                           IRQ_RX_DONE | IRQ_RX_TX_TIMEOUT | IRQ_HEADER_ERROR | IRQ_CRC_ERROR | IRQ_CAD_DONE,
                            IRQ_RADIO_NONE,
                            IRQ_RADIO_NONE );
 
@@ -967,8 +968,8 @@ void RadioRx( uint32_t timeout )
 
 void RadioRxBoosted( uint32_t timeout )
 {
-    SX126xSetDioIrqParams( IRQ_RADIO_ALL, //IRQ_RX_DONE | IRQ_RX_TX_TIMEOUT,
-                           IRQ_RADIO_ALL, //IRQ_RX_DONE | IRQ_RX_TX_TIMEOUT,
+    SX126xSetDioIrqParams( IRQ_RX_DONE | IRQ_RX_TX_TIMEOUT | IRQ_HEADER_ERROR | IRQ_CRC_ERROR | IRQ_CAD_DONE,
+                           IRQ_RX_DONE | IRQ_RX_TX_TIMEOUT | IRQ_HEADER_ERROR | IRQ_CRC_ERROR | IRQ_CAD_DONE,
                            IRQ_RADIO_NONE,
                            IRQ_RADIO_NONE );
 
@@ -1069,6 +1070,8 @@ void RadioSetPublicNetwork( bool enable )
 {
     RadioPublicNetwork.Current = RadioPublicNetwork.Previous = enable;
 
+    LOG_DBG("RadioSetPublicNetwork %s\n", (enable ? "true" : "false"));
+
     RadioSetModem( MODEM_LORA );
     if( enable == true )
     {
@@ -1121,6 +1124,13 @@ void RadioOnDioIrq( void )
 
 void RadioTimerEventProcess(void)
 {
+    /* Note that if the radio is handling the timeout events, the radio state automatically
+     * falls back to standby by the time the user handler is called.
+     * Here, however, the timeouts are based on simple MCU timers. Radio state has to be manipulated
+     * manually.  Furthermore, because the same handlers are called for MCU or radio timeouts, the user
+     * does not know which timeout was activated and will reasonably expect the radio to be in the same
+     * state regardless of which method activated the timeout.
+     */
     if (timer_evt_flags) {
         LOG_DBG("Processing timer events=%02x\n", timer_evt_flags);
         if (timer_evt_flags & TIMER_EVT_FLAG_TX_TIMEOUT) {
@@ -1193,12 +1203,45 @@ void RadioIrqProcess( void )
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
             }
-            SX126xGetPayload( RadioRxPayload, &size , 255 );
-            SX126xGetPacketStatus( &RadioPktStatus );
-            if( ( RadioEvents != NULL ) && ( RadioEvents->RxDone != NULL ) )
+            // Clean out the buffer
+            SX126xGetPayload( RadioRxPayload, &size , LORA_RADIO_MAX_PAYLOAD);
+
+            // But only report this packet if there were no CRC errors!
+            if ( ( irqRegs & IRQ_CRC_ERROR ) == 0 ) 
             {
-                RadioEvents->RxDone( RadioRxPayload, size, RadioPktStatus.Params.LoRa.RssiPkt, RadioPktStatus.Params.LoRa.SnrPkt );
+                SX126xGetPacketStatus( &RadioPktStatus );
+                if ( ( RadioEvents != NULL ) && ( RadioEvents->RxDone != NULL ) )
+                {
+                    RadioEvents->RxDone( RadioRxPayload, size, RadioPktStatus.Params.LoRa.RssiPkt, RadioPktStatus.Params.LoRa.SnrPkt );
+                }
             }
+        }
+
+        if ( ( irqRegs & IRQ_HEADER_ERROR ) == IRQ_HEADER_ERROR )
+        {
+#if 0 // Original version from Semtech: seems wrong.
+            // in RX continuous mode this triggers a timeout condition.
+            TimerStop(&RxTimeoutTimer);
+            if (RxContinuous == false)
+            {
+                //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+                SX126xSetOperatingMode(MODE_STDBY_RC);
+            }
+            if ((RadioEvents != NULL) && (RadioEvents->RxTimeout != NULL))
+            {
+                RadioEvents->RxTimeout();
+            }
+#else
+            if ( RxContinuous == false )
+            {
+                //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+                SX126xSetOperatingMode( MODE_STDBY_RC );
+            }
+            if ( ( RadioEvents != NULL ) && ( RadioEvents->RxError ) )
+            {
+                RadioEvents->RxError( IRQ_HEADER_ERROR_CODE );
+            }
+#endif
         }
 
         if( ( irqRegs & IRQ_CRC_ERROR ) == IRQ_CRC_ERROR )
@@ -1210,7 +1253,7 @@ void RadioIrqProcess( void )
             }
             if( ( RadioEvents != NULL ) && ( RadioEvents->RxError ) )
             {
-                RadioEvents->RxError( );
+                RadioEvents->RxError( IRQ_CRC_ERROR_CODE );
             }
         }
 
@@ -1263,18 +1306,6 @@ void RadioIrqProcess( void )
             //__NOP( );
         }
 
-        if( ( irqRegs & IRQ_HEADER_ERROR ) == IRQ_HEADER_ERROR )
-        {
-            TimerStop( &RxTimeoutTimer );
-            if( RxContinuous == false )
-            {
-                //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
-                SX126xSetOperatingMode( MODE_STDBY_RC );
-            }
-            if( ( RadioEvents != NULL ) && ( RadioEvents->RxTimeout != NULL ) )
-            {
-                RadioEvents->RxTimeout( );
-            }
-        }
+
     }
 }

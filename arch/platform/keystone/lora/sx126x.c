@@ -560,14 +560,12 @@ The output power is defined as power in dBm in a range of
         LOG_DBG("SX126xSetTxParams: power(limited):%d, rampTime:%d\n",
             power, rampTime);
     }
-    else {
+    else
+#endif
+    {
         LOG_DBG("SX126xSetTxParams: power:%d, rampTime:%d\n",
             power, rampTime);
     }
-#else
-    LOG_DBG("SX126xSetTxParams: power:%d, rampTime:%d\n",
-        power, rampTime);
-#endif
 
     uint8_t buf[2];
 

@@ -1163,7 +1163,7 @@ PROCESS_THREAD(loramac_process, ev, data)
                 JoinEui[0], JoinEui[1], JoinEui[2], JoinEui[3],
                 JoinEui[4], JoinEui[5], JoinEui[6], JoinEui[7]);
 
-            LOG_INFO("AppKey      : %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+            LOG_INFO("AppKey      : %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n",
                 NwkKey[0], NwkKey[1], NwkKey[2], NwkKey[3], NwkKey[4], NwkKey[5], NwkKey[6], NwkKey[7],
                 NwkKey[8], NwkKey[9], NwkKey[10], NwkKey[11], NwkKey[12], NwkKey[13], NwkKey[14], NwkKey[15]);
 
