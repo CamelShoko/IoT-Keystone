@@ -520,12 +520,26 @@ void RegionUS915InitDefaults( InitDefaultsParams_t* params )
             }
 
             // ChannelsMask
+#ifdef LORA_REGION_THINGS_NETWORK
+            // Support connection to the TTN gateway.
+            // TTN gateways listen on 125 kHz channels 8-15 only
+            NvmCtx.ChannelsDefaultMask[0] = 0xFF00;
+            NvmCtx.ChannelsDefaultMask[1] = 0x0;
+            NvmCtx.ChannelsDefaultMask[2] = 0x0;
+            NvmCtx.ChannelsDefaultMask[3] = 0x0;
+            // Note that the TTN gateway does not appear to listen on the
+            // 500 kHz channel (65) corresponding to group 8-15.
+            // 500 kHz NOT WORKING with TTN gateway NvmCtx.ChannelsDefaultMask[4] = 0x0002;
+            NvmCtx.ChannelsDefaultMask[4] = 0x0002;
+            NvmCtx.ChannelsDefaultMask[5] = 0x0000;
+#else
             NvmCtx.ChannelsDefaultMask[0] = 0xFFFF;
             NvmCtx.ChannelsDefaultMask[1] = 0xFFFF;
             NvmCtx.ChannelsDefaultMask[2] = 0xFFFF;
             NvmCtx.ChannelsDefaultMask[3] = 0xFFFF;
             NvmCtx.ChannelsDefaultMask[4] = 0x00FF;
             NvmCtx.ChannelsDefaultMask[5] = 0x0000;
+#endif
 
             // Copy channels default mask
             RegionCommonChanMaskCopy( NvmCtx.ChannelsMask, NvmCtx.ChannelsDefaultMask, 6 );

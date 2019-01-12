@@ -73,13 +73,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 /*---------------------------------------------------------------------------*/
-#define DEBUG 1 
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
+/* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "aud-sensor"
+#define LOG_LEVEL LOG_LEVEL_INFO
 /*---------------------------------------------------------------------------*/
+
 /*---------------------------------------------------------------------------*/
 typedef struct {
   volatile AUDIO_SENSOR_STATUS status;
@@ -279,14 +278,14 @@ configure(int type, int enable)
   int rv = 0;
   switch(type) {
   case SENSORS_HW_INIT:
-    PRINTF("Audio sensor init\n");
+    LOG_DBG("Audio sensor init\n");
     if(sensor_init()) {
       audio_sensor_obj.status = AUDIO_SENSOR_STATUS_STANDBY;
-      PRINTF("Audio sensor init [success]\n");
+      LOG_DBG("Audio sensor init [success]\n");
     } else {
       audio_sensor_obj.status = AUDIO_SENSOR_STATUS_DISABLED;
       rv = AUDIO_SENSOR_READING_ERROR;
-      PRINTF("Audio sensor init [FAIL]\n");
+      LOG_ERR("Audio sensor init [FAIL]\n");
     }
     break;
 

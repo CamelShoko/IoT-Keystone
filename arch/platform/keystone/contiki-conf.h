@@ -53,6 +53,15 @@
 /* Must be included after cc13xx-cc26xx-conf.h */
 #include <Board.h>
 /*---------------------------------------------------------------------------*/
+/* Define different handling for the shell (dev/serial-line.c):
+ * We'd rather not ignore any characters at all and just accept CR as the
+ * terminator, as is the default with Tera Term.
+ * Note: can't do this because TI UART driver is designed to trigger callback
+ * on NEWLINE.
+ *
+#define IGNORE_CHAR(c) (0)
+*/
+/*---------------------------------------------------------------------------*/
 #endif /* CONTIKI_CONF_H_ */
 /*---------------------------------------------------------------------------*/
 /**

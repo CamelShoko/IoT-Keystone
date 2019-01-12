@@ -78,4 +78,10 @@ serial_shell_init(void)
   process_start(&serial_shell_process, NULL);
 }
 /*---------------------------------------------------------------------------*/
+void
+serial_shell_show_prompt(void)
+{
+    serial_line_input_byte(0xa); /* send CR to trigger a prompt */
+}
+/*---------------------------------------------------------------------------*/
 /** @} */

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, This. Is. IoT. - https://thisisiot.io
+* Copyright (c) 2018, THIS. IS. IoT. - https://thisisiot.io
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -37,15 +37,19 @@
 *         This example uses the direct APIs of the LoRaMacApp
 *         class A adapter.
 *
-* \author Evan Ross <evan@firmwaremodules.com>
+* \author Evan Ross <evan@thisisiot.io>
 */
 
 #include "contiki.h"
 #include "sys/log.h"
 #include "net/mac/lora/LoRaMacContiki.h"
 
-#define DEBUG DEBUG_PRINT
-#include "net/ipv6/uip-debug.h"
+/*---------------------------------------------------------------------------*/
+/* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "LoRa-Node"
+#define LOG_LEVEL LOG_LEVEL_INFO
+/*---------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
 PROCESS(loramac_node_process, "LoRaMac-Node");
@@ -58,18 +62,25 @@ PROCESS_THREAD(loramac_node_process, ev, data)
 
     static struct etimer et;
 
-    PRINTF("Starting DEMO\n");
+    LOG_INFO("Starting LoRaMac-Node Demo\n");
     LoRaMacContiki_start(&loramac_node_process, NULL, NULL);
 
-    PRINTF("Waiting for join to complete...\n");
-    PROCESS_WAIT_EVENT_UNTIL(ev == lora_op_complete_event);
-    PRINTF("Join complete!\n");
+    LOG_INFO("Waiting for join to complete...\n");
 
     etimer_set(&et, CLOCK_SECOND * 1);
     while (1) {
-        PROCESS_YIELD_UNTIL(etimer_expired(&et));
-        etimer_reset(&et);
-        PRINTF("LoRaMac-Node example\n");
+        PROCESS_WAIT_EVENT();
+        if (ev == lora_op_complete_event) {
+            EventType_t type = (EventType_t)data;
+            if (type == EventType_JOINED) {
+                LOG_INFO("Join complete!\n");
+                etimer_stop(&et);
+            }
+        }
+        if (ev == PROCESS_EVENT_TIMER && etimer_expired(&et)) {
+            LOG_INFO(".\n");
+            etimer_reset(&et);
+        }
     }
 
     PROCESS_END();

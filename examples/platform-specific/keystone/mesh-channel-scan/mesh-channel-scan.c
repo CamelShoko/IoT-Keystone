@@ -170,9 +170,13 @@ PROCESS_THREAD(channel_scanner_process, ev, data)
 
     static struct etimer meas_timer;
     static struct etimer scan_timer;
+    static bool led_color_toggle;
+
+    leds_off(LEDS_ALL);
+    led_color_toggle = false;
 
     printf("Starting Mesh Channel Scanner DEMO\n");
-    
+
     /* Scan */
     etimer_set(&scan_timer, CLOCK_SECOND * 8);
 
@@ -181,7 +185,6 @@ PROCESS_THREAD(channel_scanner_process, ev, data)
             etimer_expired(&scan_timer));
         
         etimer_reset(&scan_timer);
-        leds_toggle(LEDS_ALL); /* flash the Keystone board user LEDs */
 
         static clock_time_t time;
         time = clock_time();
@@ -201,6 +204,14 @@ PROCESS_THREAD(channel_scanner_process, ev, data)
 
             radio_result_t rv = RADIO_RESULT_OK;
             radio_value_t value;
+
+            if (led_color_toggle) {
+                leds_single_toggle(LEDS_RED);
+            }
+            else {
+                leds_single_toggle(LEDS_GREEN);
+            }
+            led_color_toggle = !led_color_toggle;
 
             PRINTF("[%d] ... ", measurement_channel);
             /* Select the measurement channel */
@@ -229,6 +240,7 @@ PROCESS_THREAD(channel_scanner_process, ev, data)
             }
         }
 
+        leds_off(LEDS_ALL);
         /* stop the timer */
         etimer_stop(&meas_timer);
         printf("------ scan cycle duration %lu s, per channel: %lu ms ----\n",

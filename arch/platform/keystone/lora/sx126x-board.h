@@ -156,4 +156,8 @@ void SX126xDbgPinRxWrite( uint8_t state );
  */
 extern SX126x_t SX126x;
 
+
+extern const char* CommandStatusStrings[];
+extern const char* ChipModeStrings[];
+
 #endif // __SX126x_BOARD_H__

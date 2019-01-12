@@ -90,3 +90,29 @@ int8_t Nibble2HexChar( uint8_t a )
         return '?';
     }
 }
+
+// CodingRate
+// [1: 4/5,
+//  2: 4/6,
+//  3: 4/7,
+//  4: 4/8]
+const char* LoraCRStrings[] = {
+    "err",
+    "4/5",
+    "4/6",
+    "4/7",
+    "4/8"
+};
+
+// Bandwidth
+// [0: 125 kHz,
+//  1: 250 kHz,
+//  2: 500 kHz,
+//  3: Reserved]
+const char* LoraBWStrings[] = {
+    "125",
+    "250",
+    "500",
+    "reserved"
+};
+

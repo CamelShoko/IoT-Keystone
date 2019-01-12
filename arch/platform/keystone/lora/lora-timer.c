@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, This. Is. IoT. - https://thisisiot.io
+ * Copyright (c) 2018, THIS. IS. IoT. - https://thisisiot.io
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,14 @@
 #include "contiki.h"
 #include "lora-timer.h"
 #include "lora-utilities.h"
+
+ /*---------------------------------------------------------------------------*/
+ /* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "LoRa-Timer"
+#define LOG_LEVEL LOG_LEVEL_LORA
+ /*---------------------------------------------------------------------------*/
+
 
 void TimerInit(TimerEvent_t *obj, void(*callback)(void))
 {
@@ -97,6 +105,8 @@ void TimerSetValue(TimerEvent_t *obj, uint32_t value_ms )
     uint32_t ticks = MS2TICKS(value_ms);
     obj->Timestamp = ticks;
     obj->ReloadValue = ticks;
+
+    LOG_DBG("TimerSetValue requested %lu ms -> %lu ticks\n", value_ms, ticks);
 }
 
 

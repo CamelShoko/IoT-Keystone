@@ -27,6 +27,11 @@
 #include <stdbool.h>
 
 /*!
+ *  Maximum packet payload in bytes.
+ */
+#define LORA_RADIO_MAX_PAYLOAD      255
+
+/*!
  * Radio driver supported modems
  */
 typedef enum
@@ -36,8 +41,8 @@ typedef enum
 }RadioModems_t;
 
 /*!
- * Radio driver internal state machine states definition
- */
+* Radio driver internal state machine states definition
+*/
 typedef enum
 {
     RF_IDLE = 0,   //!< The radio is idle
@@ -45,6 +50,16 @@ typedef enum
     RF_TX_RUNNING, //!< The radio is in transmission state
     RF_CAD,        //!< The radio is doing channel activity detection
 }RadioState_t;
+
+/*!
+* \brief Structure describing the error codes for callback functions
+*/
+typedef enum
+{
+    IRQ_HEADER_ERROR_CODE = 0x01,
+    IRQ_SYNCWORD_ERROR_CODE = 0x02,
+    IRQ_CRC_ERROR_CODE = 0x04,
+}RadioIrqErrorCode_t;
 
 /*!
  * \brief Radio driver callback functions
@@ -62,6 +77,8 @@ typedef struct
     /*!
      * \brief Rx Done callback prototype.
      *
+     * A complete packet is received without error.
+     *
      * \param [IN] payload Received buffer pointer
      * \param [IN] size    Received buffer size
      * \param [IN] rssi    RSSI value computed while receiving the frame [dBm]
@@ -76,8 +93,14 @@ typedef struct
     void    ( *RxTimeout )( void );
     /*!
      * \brief Rx Error callback prototype.
+     *
+     * Note: RX errors negate the generation of the RxDone event.
+     * E.g. if a whole packet is recevied but CRC is invalid, only this
+     * error callback is invoked.
+     *
+     * \param [IN] code  IRQ error triggering invocation of this event
      */
-    void    ( *RxError )( void );
+    void    ( *RxError )( RadioIrqErrorCode_t code );
     /*!
      * \brief  FHSS Change Channel callback prototype.
      *

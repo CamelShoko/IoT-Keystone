@@ -1,3 +1,10 @@
 # Add the regions directory to the build
 MODULES += os/net/mac/lora/region
 MODULES += os/net/mac/lora/soft-se
+
+# Currently we need to disable the regular mesh netstack
+# while operating this stack.
+
+#MAKE_MAC = MAKE_MAC_NULLMAC
+#MAKE_NET = MAKE_NET_NULLNET
+#CFLAGS  += -DNETSTACK_CONF_RADIO=nullradio_driver

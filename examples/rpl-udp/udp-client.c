@@ -15,7 +15,7 @@
 static struct simple_udp_connection udp_conn;
 
 #define START_INTERVAL		(15 * CLOCK_SECOND)
-#define SEND_INTERVAL		  (60 * CLOCK_SECOND)
+#define SEND_INTERVAL		  (10 * CLOCK_SECOND)
 
 static struct simple_udp_connection udp_conn;
 

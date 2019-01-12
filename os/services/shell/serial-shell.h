@@ -46,4 +46,9 @@
  */
 void serial_shell_init(void);
 
+/**
+ * Trigger showing of the prompt.
+ */
+void serial_shell_show_prompt(void);
+
 #endif /* SERIAL_SHELL_H_ */

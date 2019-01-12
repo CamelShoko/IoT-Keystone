@@ -181,6 +181,25 @@ int8_t Nibble2HexChar( uint8_t a );
  */
 #define CRITICAL_SECTION_END( ) int_master_status_set(mask)
 
+/* 
+ * Strings corresponding to various LoRa comm parameters.
+ * Accessed by specified index.
+ */
+
+// CodingRate
+// [1: 4/5,
+//  2: 4/6,
+//  3: 4/7,
+//  4: 4/8]
+extern const char* LoraCRStrings[];
+
+// Bandwidth
+// [0: 125 kHz,
+//  1: 250 kHz,
+//  2: 500 kHz,
+//  3: Reserved]
+extern const char* LoraBWStrings[];
+
 
 
 #endif // __UTILITIES_H__
