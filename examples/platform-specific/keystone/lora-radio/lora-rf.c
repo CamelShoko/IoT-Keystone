@@ -107,6 +107,8 @@ static RadioEvents_t RadioEvents;
 #define LORA_TX_TIMEOUT                             3000  // milliseconds
 #define LORA_SYNC_WORD                              0x3444 // public network  / 0x1424 private network
 
+#define DEFAULT_CW_TIMEOUT_S                        10
+
 
 /*---------------------------------------------------------------------------*/
 
@@ -145,7 +147,16 @@ void setRadioSettingsDefaults()
     RadioSettings.bw = LORA_BANDWIDTH;
     RadioSettings.sf = LORA_SPREADING_FACTOR;
     RadioSettings.cr = LORA_CODINGRATE;
-    RadioSettings.pwr = LORA_TX_POWER;
+
+#if Board_SX1262_TX_POWER_LIMIT
+    if (LORA_TX_POWER > Board_SX1262_TX_POWER_LIMIT) {
+        RadioSettings.pwr = Board_SX1262_TX_POWER_LIMIT;
+    }
+    else
+#endif
+    {
+        RadioSettings.pwr = LORA_TX_POWER;
+    }
 
     RadioSettings.payload_len = 0;
     memset(RadioSettings.payload, 0, LORA_RADIO_MAX_PAYLOAD);
@@ -508,8 +519,7 @@ PT_THREAD(cmd_lora(struct pt *pt, shell_output_func output, char *args))
             /* Get duration */
             SHELL_ARGS_NEXT(args, next_args);
             if (args == NULL) {
-                SHELL_OUTPUT(output, "missing duration in seconds\n");
-                PT_EXIT(pt);
+                tx_timeout_s = DEFAULT_CW_TIMEOUT_S;
             }
             else {
                 char *ptr; /* dummy */
@@ -531,6 +541,35 @@ PT_THREAD(cmd_lora(struct pt *pt, shell_output_func output, char *args))
              */
             Radio.SetTxContinuousWave(RadioSettings.freq, RadioSettings.pwr, tx_timeout_s);
 
+        }
+        else if (strcmp("cwmod", args) == 0) {
+
+            uint16_t tx_timeout_s;
+
+            /* Get duration */
+            SHELL_ARGS_NEXT(args, next_args);
+            if (args == NULL) {
+                tx_timeout_s = DEFAULT_CW_TIMEOUT_S;
+            }
+            else {
+                char *ptr; /* dummy */
+                tx_timeout_s = (uint16_t)strtol(args, &ptr, 10); /* returns 0 other wise */
+                if (tx_timeout_s < 1) {
+                    SHELL_OUTPUT(output, "error: duration %d too small\n",
+                        tx_timeout_s);
+                    PT_EXIT(pt);
+                }
+            }
+
+            /* Execute command */
+            SHELL_OUTPUT(output, "Running modulated CW TX on freq %lu kHz at power %d dBm for %d seconds...\n",
+                RadioSettings.freq, RadioSettings.pwr, tx_timeout_s);
+
+            leds_single_on(LEDS_GREEN);
+            /* Radio stays in this mode until further notice.  The timeout just sets a lora-timer (etimer)
+            * instance which triggers the OnRadioTxTimeout() callback
+            */
+            RadioSetTxInfinitePreamble(RadioSettings.freq, RadioSettings.pwr, tx_timeout_s);
         }
         else if (strcmp("rx", args) == 0) {
 

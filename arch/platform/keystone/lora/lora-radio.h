@@ -397,4 +397,10 @@ struct Radio_s
  */
 extern const struct Radio_s Radio;
 
+
+/* SX1262 test function */
+void RadioSetTxInfinitePreamble(uint32_t freq, int8_t power, uint16_t time);
+
+
+
 #endif // __RADIO_H__

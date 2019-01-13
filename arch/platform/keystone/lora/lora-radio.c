@@ -328,6 +328,7 @@ void RadioRxBoosted( uint32_t timeout );
  */
 void RadioSetRxDutyCycle( uint32_t rxTime, uint32_t sleepTime );
 
+
 /*!
  * Radio driver structure initialization
  */
@@ -1012,6 +1013,15 @@ void RadioSetTxContinuousWave( uint32_t freq, int8_t power, uint16_t time )
 
     TimerSetValue( &TxTimeoutTimer, time  * 1e3 );
     TimerStart( &TxTimeoutTimer );
+}
+
+void RadioSetTxInfinitePreamble(uint32_t freq, int8_t power, uint16_t time)
+{
+    SX126xSetRfFrequency(freq);
+    SX126xSetRfTxPower(power);
+    SX126xSetTxInfinitePreamble();
+    TimerSetValue(&TxTimeoutTimer, time  * 1e3);
+    TimerStart(&TxTimeoutTimer);
 }
 
 int16_t RadioRssi( RadioModems_t modem )

@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = lora-radio
+CONTIKI_PROJECT = lora-rf
 all: $(CONTIKI_PROJECT)
 
 PLATFORMS_EXCLUDE = sky nrf52dk openmote-cc2538 native simplelink 
