@@ -38,6 +38,7 @@ COOJA.testlog
 *.firmware
 *.cc26x0-cc13x0
 *.zoul
+*.keystone
 
 # do not ignore platform makefiles
 !Makefile.cc2538dk
@@ -67,3 +68,8 @@ tests/18-coap-lwm2m/leshan-server-demo*.jar
 # x86 UEFI files
 cpu/x86/uefi/Makefile.uefi
 cpu/x86/uefi/edk2
+
+# IDE artifacts
+.vs
+*.vcxproj*
+*.sln
