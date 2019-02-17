@@ -41,6 +41,11 @@ endif
 
 CFLAGS += $(addprefix -D, $(BOARD_DEFINES))
 
+# Setup the heap to something that works on all platforms. 
+# The allocated heap can be defined by the user application.
+HEAPSIZE ?= 0x100
+LDFLAGS += -Wl,--defsym=HEAPSIZE=$(HEAPSIZE)
+
 CONTIKI_TARGET_SOURCEFILES += platform.c
 CONTIKI_TARGET_SOURCEFILES += batmon-sensor.c
 CONTIKI_TARGET_SOURCEFILES += $(BOARD_SOURCEFILES)

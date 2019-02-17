@@ -45,12 +45,10 @@
 #include <stdint.h>
 #include <stdio.h>
 /*---------------------------------------------------------------------------*/
-#define DEBUG 0
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
+/* Log configuration */
+#include "sys/log.h"
+#define LOG_MODULE "syscalls"
+#define LOG_LEVEL LOG_LEVEL_ERR
 /*---------------------------------------------------------------------------*/
 /**
  * \brief Enlarges the allocated heap space
@@ -77,7 +75,7 @@ _sbrk(int incr)
   uint8_t *prev_heap_end = heap_end;
 
   if(heap_end + incr > &_eheap) {
-    PRINTF("Out of heap space!\n");
+    LOG_ERR("Out of heap space by %d! (incr=%d)\n", ((heap_end + incr) - &_eheap), incr);
     errno = ENOMEM;
     return (caddr_t)-1;
   }

@@ -50,9 +50,11 @@ endif
 
 CFLAGS += $(addprefix -D, $(BOARD_DEFINES))
 
-# Setup the heap to something useful.  The audio sensor streaming driver
-# utilizes the heap.
-LDFLAGS += -Wl,--defsym=HEAPSIZE=0x1000
+# Setup the heap to something useful.  
+# The audio sensor streaming driver utilizes the heap.
+# The allocated heap can be defined by the user application.
+HEAPSIZE ?= 0x1000
+LDFLAGS += -Wl,--defsym=HEAPSIZE=$(HEAPSIZE)
 
 CONTIKI_TARGET_SOURCEFILES += platform.c
 CONTIKI_TARGET_SOURCEFILES += batmon-sensor.c
