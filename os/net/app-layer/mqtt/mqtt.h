@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015, Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (c) 2019, THIS. IS. IoT. - https://thisisiot.io
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,10 +33,10 @@
  * \addtogroup apps
  * @{
  *
- * \defgroup mqtt-engine An implementation of MQTT v3.1
+ * \defgroup mqtt-engine An implementation of MQTT v3.1.1
  * @{
  *
- * This application is an engine for MQTT v3.1. It supports QoS Levels 0 and 1.
+ * This application is an engine for MQTT v3.1.1 It supports QoS Levels 0 and 1.
  *
  * MQTT is a Client Server publish/subscribe messaging transport protocol.
  * It is light weight, open, simple, and designed so as to be easy to implement.
@@ -99,6 +100,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef MQTT_CONF_PROTOCOL_VERSION
+#define MQTT_PROTOCOL_VERSION MQTT_CONF_PROTOCOL_VERSION
+#else
+#define MQTT_PROTOCOL_VERSION 3
+#endif
+
+#if (MQTT_PROTOCOL_VERSION !=3) && (MQTT_PROTOCOL_VERSION !=4)
+#error MQTT_PROTOCOL_VERSION must be 3 (3.1) or 4 (3.1.1)
+#endif
+
+
 /*---------------------------------------------------------------------------*/
 /* Protocol constants */
 #define MQTT_CLIENT_ID_MAX_LEN 23
@@ -108,14 +121,19 @@
 #define MQTT_TCP_OUTPUT_BUFF_SIZE 512
 
 #define MQTT_INPUT_BUFF_SIZE 512
-#define MQTT_MAX_TOPIC_LENGTH 64
+#define MQTT_MAX_TOPIC_LENGTH 256
 #define MQTT_MAX_TOPICS_PER_SUBSCRIBE 1
 
 #define MQTT_FHDR_SIZE 1
 #define MQTT_MAX_REMAINING_LENGTH_BYTES 4
-#define MQTT_PROTOCOL_VERSION 3
+#if MQTT_PROTOCOL_VERSION == 3 /* 3.1 */
+#define MQTT_PROTOCOL_NAME_LEN 6
 #define MQTT_PROTOCOL_NAME "MQIsdp"
-#define MQTT_TOPIC_MAX_LENGTH 128
+#else /* 4 = 3.1.1 and up */
+#define MQTT_PROTOCOL_NAME_LEN 4
+#define MQTT_PROTOCOL_NAME "MQTT"
+#endif
+
 /*---------------------------------------------------------------------------*/
 /*
  * Debug configuration, this is similar but not exactly like the Debugging
@@ -138,6 +156,11 @@ typedef enum {
   MQTT_RETAIN_OFF,
   MQTT_RETAIN_ON,
 } mqtt_retain_t;
+
+typedef enum {
+    MQTT_CLEAN_SESSION_OFF,
+    MQTT_CLEAN_SESSION_ON,
+} mqtt_clean_session_t;
 
 /**
  * \brief MQTT engine events
@@ -492,6 +515,19 @@ void mqtt_set_last_will(struct mqtt_connection *conn,
                         char *topic,
                         char *message,
                         mqtt_qos_level_t qos);
+/*---------------------------------------------------------------------------*/
+/**
+ * \brief Set the clean session connection attribute.
+ * \param clean_session ON - set the cleanSession flag to 1.
+ *                      OFF - set the cleanSession flag to 0.
+ * 
+ * The cleanSession attribute indicates to the server and client
+ * that a new session must be created on the connection attempt.
+ * When the flag is set to 0, a session is persisted across connection.
+ * A session includes client topic subscriptions.
+ */
+void mqtt_set_clean_session(struct mqtt_connection *conn,
+                            mqtt_clean_session_t clean_session);
 
 #define mqtt_connected(conn) \
   ((conn)->state == MQTT_CONN_STATE_CONNECTED_TO_BROKER ? 1 : 0)

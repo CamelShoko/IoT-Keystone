@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015, Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (c) 2019, THIS. IS. IoT. - https://thisisiot.io
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -116,7 +117,11 @@ typedef enum {
   MQTT_VHDR_CONN_REJECTED_UNAUTHORIZED,
 } mqtt_vhdr_connack_fields_t;
 /*---------------------------------------------------------------------------*/
+#if MQTT_PROTOCOL_VERSION == 3
 #define MQTT_CONNECT_VHDR_FLAGS_SIZE 12
+#else
+#define MQTT_CONNECT_VHDR_FLAGS_SIZE 10
+#endif
 
 #define MQTT_STRING_LEN_SIZE 2
 #define MQTT_MID_SIZE 2
@@ -384,7 +389,7 @@ PT_THREAD(connect_pt(struct pt *pt, struct mqtt_connection *conn))
 {
   PT_BEGIN(pt);
 
-  DBG("MQTT - Sending CONNECT message...\n");
+  DBG("MQTT - Sending CONNECT message... PROTOCOL %d\n", MQTT_PROTOCOL_VERSION);
 
   /* Set up FHDR */
   conn->out_packet.fhdr = MQTT_FHDR_MSG_TYPE_CONNECT;
@@ -410,8 +415,8 @@ PT_THREAD(connect_pt(struct pt *pt, struct mqtt_connection *conn))
                       conn->out_packet.remaining_length_enc,
                       conn->out_packet.remaining_length_enc_bytes);
   PT_MQTT_WRITE_BYTE(conn, 0);
-  PT_MQTT_WRITE_BYTE(conn, 6);
-  PT_MQTT_WRITE_BYTES(conn, (uint8_t *)MQTT_PROTOCOL_NAME, 6);
+  PT_MQTT_WRITE_BYTE(conn, MQTT_PROTOCOL_NAME_LEN);
+  PT_MQTT_WRITE_BYTES(conn, (uint8_t *)MQTT_PROTOCOL_NAME, MQTT_PROTOCOL_NAME_LEN);
   PT_MQTT_WRITE_BYTE(conn, MQTT_PROTOCOL_VERSION);
   PT_MQTT_WRITE_BYTE(conn, conn->connect_vhdr_flags);
   PT_MQTT_WRITE_BYTE(conn, (conn->keep_alive >> 8));
@@ -1306,6 +1311,8 @@ mqtt_register(struct mqtt_connection *conn, struct process *app_process,
   conn->app_process = app_process;
   conn->auto_reconnect = 1;
   conn->max_segment_size = max_segment_size;
+  /* By default the clean session flag is set unless cleared by client */
+  conn->connect_vhdr_flags |= MQTT_VHDR_CLEAN_SESSION_FLAG;
   reset_defaults(conn);
 
   mqtt_init();
@@ -1339,8 +1346,7 @@ mqtt_connect(struct mqtt_connection *conn, char *host, uint16_t port,
   conn->server_port = port;
   conn->out_buffer_ptr = conn->out_buffer;
   conn->out_packet.qos_state = MQTT_QOS_STATE_NO_ACK;
-  conn->connect_vhdr_flags |= MQTT_VHDR_CLEAN_SESSION_FLAG;
-
+  
   /* convert the string IPv6 address to a numeric IPv6 address */
   if(uiplib_ip6addrconv(host, &ip6addr) == 0) {
     return MQTT_STATUS_ERROR;
@@ -1493,4 +1499,20 @@ mqtt_set_last_will(struct mqtt_connection *conn, char *topic, char *message,
   }
 }
 /*----------------------------------------------------------------------------*/
+void 
+mqtt_set_clean_session(struct mqtt_connection *conn,
+                       mqtt_clean_session_t clean_session)
+{
+  if (conn != NULL) {
+    if (clean_session == MQTT_CLEAN_SESSION_ON) {
+      conn->connect_vhdr_flags |= MQTT_VHDR_CLEAN_SESSION_FLAG;
+    }
+    else {
+      conn->connect_vhdr_flags &= ~MQTT_VHDR_CLEAN_SESSION_FLAG;
+    }
+  }
+}
+
+/*----------------------------------------------------------------------------*/
+
 /** @} */
