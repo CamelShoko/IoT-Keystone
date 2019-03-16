@@ -35,6 +35,9 @@
 /* Enable TCP */
 #define UIP_CONF_TCP 1
 
+/* Enable protocol version 4 (3.1.1) */
+#define MQTT_CONF_PROTOCOL_VERSION 4
+
 /* Change to 1 to use with the IBM Watson IoT platform */
 #define MQTT_CLIENT_CONF_WITH_IBM_WATSON 0
 
